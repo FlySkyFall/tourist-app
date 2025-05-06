@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content="{{csrfToken}}">
+  <title>{{tour.title}} - Краснодарский край</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="bg-gray-100 font-sans">
+  {{> navbar}}
+
+  <section class="py-12 bg-white">
+    <div class="container mx-auto px-4">
+      <h1 class="text-3xl font-bold mb-6">{{tour.title}}</h1>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div>
+          <img src="{{tour.images.[0]}}" alt="{{tour.title}}" class="w-full h-96 object-cover rounded-lg">
+        </div>
+        <div>
+          <p class="text-gray-600 mb-4">{{tour.description}}</p>
+          <p class="text-blue-600 font-bold text-xl mb-4">{{tour.price}} ₽</p>
+          <p class="mb-2"><strong>Тип:</strong> 
+            {{#if (eq tour.type 'active')}}Активный
+            {{else if (eq tour.type 'excursion')}}Экскурсионный
+            {{else if (eq tour.type 'camping')}}Кемпинг
+            {{else if (eq tour.type 'health')}}Оздоровительный
+            {{else}}Пассивный{{/if}}
+          </p>
+          <p class="mb-2"><strong>Продолжительность:</strong> {{tour.durationDays}} дней</p>
+          <p class="mb-2"><strong>Регион:</strong> {{tour.location.region}}</p>
+          <p class="mb-2"><strong>Уровень сложности:</strong> 
+            {{#if (eq tour.difficultyLevel 'easy')}}Лёгкий
+            {{else if (eq tour.difficultyLevel 'medium')}}Средний
+            {{else}}Сложный{{/if}}
+          </p>
+          <p class="mb-2"><strong>Размер группы:</strong> {{tour.minGroupSize}}-{{tour.maxGroupSize}} человек</p>
+          <p class="mb-4"><strong>Рейтинг:</strong> {{tour.rating}} ({{tour.reviewsCount}} отзывов)</p>
+        </div>
+      </div>
+
+      {{> booking/form tour=tour user=user message=message}}
+
+      <div class="mt-8">
+        <h2 class="text-2xl font-bold mb-4">Подробности</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <h3 class="text-xl font-semibold mb-2">Размещение</h3>
+            <p><strong>Тип:</strong> 
+              {{#if (eq tour.accommodation.type 'hotel')}}Отель
+              {{else if (eq tour.accommodation.type 'sanatorium')}}Санаторий
+              {{else if (eq tour.accommodation.type 'camping')}}Кемпинг
+              {{else if (eq tour.accommodation.type 'retreat')}}Ретрит
+              {{else}}Без размещения{{/if}}
+            </p>
+            <p><strong>Название:</strong> {{tour.accommodation.name}}</p>
+            <p><strong>Рейтинг:</strong> {{tour.accommodation.rating}}/5</p>
+            <p><strong>Удобства:</strong> 
+              {{#each tour.accommodation.amenities}}
+                {{this}}{{#unless @last}}, {{/unless}}
+              {{else}}
+                Нет удобств
+              {{/each}}
+            </p>
+          </div>
+          <div>
+            <h3 class="text-xl font-semibold mb-2">Сезон</h3>
+            <p><strong>Начало:</strong> {{formatDate tour.season.start}}</p>
+            <p><strong>Конец:</strong> {{formatDate tour.season.end}}</p>
+          </div>
+        </div>
+
+        <h3 class="text-xl font-semibold mt-6 mb-2">Активности</h3>
+        <ul class="list-disc pl-6">
+          {{#each tour.activities}}
+            <li>{{this.name}} ({{this.durationHours}} ч, {{#if this.equipmentRequired}}требуется оборудование{{else}}без оборудования{{/if}})</li>
+          {{else}}
+            <p>Нет активностей</p>
+          {{/each}}
+        </ul>
+
+        <h3 class="text-xl font-semibold mt-6 mb-2">Экскурсии</h3>
+        <ul class="list-disc pl-6">
+          {{#each tour.excursions}}
+            <li>{{this.name}} ({{this.durationHours}} ч, {{this.price}} ₽)</li>
+          {{else}}
+            <p>Нет экскурсий</p>
+          {{/each}}
+        </ul>
+
+        <h3 class="text-xl font-semibold mt-6 mb-2">Включённые услуги</h3>
+        <ul class="list-disc pl-6">
+          {{#each tour.includedServices}}
+            <li>{{this}}</li>
+          {{else}}
+            <p>Нет включённых услуг</p>
+          {{/each}}
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  {{> footer}}
+
+  <script>
+    // Передача дат в JavaScript в формате ISO
+    window.tourData = {
+      season: {
+        start: '{{tour.season.start}}',
+        end: '{{tour.season.end}}'
+      }
+    };
+    // Отладка CSRF-токена
+    console.log('CSRF token in meta tag:', document.querySelector('meta[name="csrf-token"]')?.content);
+  </script>
+  <script src="/js/booking.js"></script>
+</body>
+</html>

@@ -1,0 +1,57 @@
+const User = require('../models/User');
+const Booking = require('../models/Booking');
+
+exports.getProfile = async (req, res) => {
+  try {
+    if (!req.user) {
+      req.flash('error', 'Войдите в аккаунт для просмотра профиля');
+      return res.redirect('/auth/login');
+    }
+
+    // Преобразуем Mongoose-документ в обычный объект
+    const user = req.user.toObject();
+    console.log('User data sent to profile:', user); // Отладка
+
+    const bookings = await Booking.find({ userId: req.user._id })
+      .populate('tourId')
+      .lean(); // .lean() уже возвращает обычные объекты
+
+    res.render('profile', {
+      user,
+      bookings,
+      message: req.flash('success') || req.flash('error'),
+    });
+  } catch (error) {
+    console.error('Error in getProfile:', error.message, error.stack);
+    res.status(500).render('error', { message: 'Ошибка загрузки профиля' });
+  }
+};
+
+exports.updateProfile = async (req, res) => {
+  try {
+    if (!req.user) {
+      req.flash('error', 'Войдите в аккаунт для редактирования профиля');
+      return res.redirect('/auth/login');
+    }
+
+    const { firstName, lastName, phone, preferences } = req.body;
+    const preferencesArray = preferences ? preferences.split(',').map(p => p.trim()) : [];
+
+    await User.findByIdAndUpdate(req.user._id, {
+      $set: {
+        'profile.firstName': firstName,
+        'profile.lastName': lastName,
+        'profile.phone': phone,
+        'profile.preferences': preferencesArray,
+        updatedAt: Date.now(),
+      },
+    });
+
+    req.flash('success', 'Профиль успешно обновлён');
+    res.redirect('/profile');
+  } catch (error) {
+    console.error('Error in updateProfile:', error.message, error.stack);
+    req.flash('error', 'Ошибка при обновлении профиля');
+    res.redirect('/profile');
+  }
+};

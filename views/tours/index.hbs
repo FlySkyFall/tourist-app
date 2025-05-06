@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Туры - Краснодарский край</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="bg-gray-100 font-sans">
+  {{> navbar}}
+
+  <section class="bg-gray-800 text-white py-12">
+    <div class="container mx-auto px-4 text-center">
+      <h1 class="text-4xl font-bold mb-4">Все туры</h1>
+      <p class="text-lg">Выберите идеальный тур для вашего отдыха</p>
+    </div>
+  </section>
+
+  <section class="py-12 bg-white">
+    <div class="container mx-auto px-4">
+      <div class="mb-6">
+        <div class="flex justify-center mb-4">
+          <input type="text" id="tour-search" placeholder="Поиск туров..." value="{{currentSearch}}" class="px-4 py-2 border rounded-lg w-full max-w-md focus:outline-none focus:ring-2 focus:ring-blue-600">
+        </div>
+        <div class="flex justify-center mb-4">
+          <select id="region-filter" class="px-4 py-2 border rounded-lg w-full max-w-md focus:outline-none focus:ring-2 focus:ring-blue-600">
+            <option value="" {{eq currentRegion '' 'selected'}}>Все регионы</option>
+            {{#each regions}}
+              <option value="{{this.name}}" {{eq ../currentRegion this.name 'selected'}}>{{this.name}}</option>
+            {{/each}}
+          </select>
+        </div>
+        <div class="flex flex-col items-center mb-4">
+          <div class="flex flex-wrap justify-center mb-2 w-full max-w-md">
+            <input type="number" id="min-price" placeholder="Мин. цена (₽)" value="{{currentMinPrice}}" class="px-4 py-2 border rounded-lg w-1/2 mr-1 focus:outline-none focus:ring-2 focus:ring-blue-600">
+            <input type="number" id="max-price" placeholder="Макс. цена (₽)" value="{{currentMaxPrice}}" class="px-4 py-2 border rounded-lg w-1/2 ml-1 focus:outline-none focus:ring-2 focus:ring-blue-600">
+          </div>
+          <div class="flex flex-wrap justify-center mb-2 w-full max-w-md">
+            <input type="date" id="start-date" value="{{currentStartDate}}" class="px-4 py-2 border rounded-lg w-1/2 mr-1 focus:outline-none focus:ring-2 focus:ring-blue-600">
+            <input type="date" id="end-date" value="{{currentEndDate}}" class="px-4 py-2 border rounded-lg w-1/2 ml-1 focus:outline-none focus:ring-2 focus:ring-blue-600">
+          </div>
+          <button id="apply-price-date" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Применить</button>
+        </div>
+        <div class="flex justify-center mb-4">
+          <select id="sort-by" class="px-4 py-2 border rounded-lg w-full max-w-md focus:outline-none focus:ring-2 focus:ring-blue-600">
+            <option value="" {{eq currentSortBy '' 'selected'}}>Без сортировки</option>
+            <option value="price-asc" {{eq currentSortBy 'price-asc' 'selected'}}>Цена: по возрастанию</option>
+            <option value="price-desc" {{eq currentSortBy 'price-desc' 'selected'}}>Цена: по убыванию</option>
+            <option value="rating-asc" {{eq currentSortBy 'rating-asc' 'selected'}}>Рейтинг: по возрастанию</option>
+            <option value="rating-desc" {{eq currentSortBy 'rating-desc' 'selected'}}>Рейтинг: по убыванию</option>
+          </select>
+        </div>
+        <div class="flex flex-col items-center mb-4">
+          <div class="flex flex-wrap justify-center mb-2 w-full max-w-md">
+            <input type="number" id="min-duration" placeholder="Мин. длительность (дни)" value="{{currentMinDuration}}" class="px-4 py-2 border rounded-lg w-1/2 mr-1 focus:outline-none focus:ring-2 focus:ring-blue-600">
+            <input type="number" id="max-duration" placeholder="Макс. длительность (дни)" value="{{currentMaxDuration}}" class="px-4 py-2 border rounded-lg w-1/2 ml-1 focus:outline-none focus:ring-2 focus:ring-blue-600">
+          </div>
+          <div class="flex justify-center mb-2 w-full max-w-md">
+            <select id="difficulty-filter" multiple class="px-4 py-2 border rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-600">
+              <option value="easy" {{includes currentDifficulties 'easy' 'selected'}}>Лёгкий</option>
+              <option value="medium" {{includes currentDifficulties 'medium' 'selected'}}>Средний</option>
+              <option value="hard" {{includes currentDifficulties 'hard' 'selected'}}>Сложный</option>
+            </select>
+          </div>
+          <button id="apply-duration-difficulty" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Применить</button>
+        </div>
+        <div class="flex flex-col items-center mb-4">
+          <div class="flex justify-center mb-2 w-full max-w-md">
+            <select id="amenities-filter" multiple class="px-4 py-2 border rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-600">
+              {{#each amenitiesList}}
+                <option value="{{this}}" {{includes ../currentAmenities this 'selected'}}>{{this}}</option>
+              {{/each}}
+            </select>
+          </div>
+          <button id="apply-amenities" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Применить</button>
+        </div>
+        <div class="flex justify-center filters">
+          <button data-type="" class="filter-btn px-4 py-2 mx-1 rounded {{eq currentType 'all' 'bg-blue-600 text-white' 'bg-gray-200 text-gray-800'}}">Все</button>
+          <button data-type="active" class="filter-btn px-4 py-2 mx-1 rounded {{eq currentType 'active' 'bg-blue-600 text-white' 'bg-gray-200 text-gray-800'}}">Активный</button>
+          <button data-type="excursion" class="filter-btn px-4 py-2 mx-1 rounded {{eq currentType 'excursion' 'bg-blue-600 text-white' 'bg-gray-200 text-gray-800'}}">Экскурсионный</button>
+          <button data-type="camping" class="filter-btn px-4 py-2 mx-1 rounded {{eq currentType 'camping' 'bg-blue-600 text-white' 'bg-gray-200 text-gray-800'}}">Кемпинг</button>
+          <button data-type="health" class="filter-btn px-4 py-2 mx-1 rounded {{eq currentType 'health' 'bg-blue-600 text-white' 'bg-gray-200 text-gray-800'}}">Оздоровительный</button>
+          <button data-type="passive" class="filter-btn px-4 py-2 mx-1 rounded {{eq currentType 'passive' 'bg-blue-600 text-white' 'bg-gray-200 text-gray-800'}}">Пассивный</button>
+        </div>
+      </div>
+
+      {{#if error}}
+        <p class="text-center text-red-600 mb-6">{{error}}</p>
+      {{/if}}
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 tours-list">
+        {{#each tours}}
+          <div class="tour-card bg-gray-100 rounded-lg shadow-md overflow-hidden" data-category="{{this.type}}">
+            <img src="{{this.images.[0]}}" alt="{{this.title}}" class="w-full h-48 object-cover">
+            <div class="p-4">
+              <h3 class="text-xl font-semibold mb-2">{{this.title}}</h3>
+              <p class="text-gray-600 mb-2">{{this.description}}</p>
+              <p class="text-blue-600 font-bold mb-4">{{this.price}} ₽</p>
+              <a href="/tours/{{this._id}}" class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded">Подробнее</a>
+            </div>
+          </div>
+        {{else}}
+          <p class="text-center text-gray-600 col-span-3">Нет доступных туров</p>
+        {{/each}}
+      </div>
+
+      {{#if (gt totalPages 1)}}
+        <div class="flex justify-center mt-8">
+          <div class="pagination">
+            {{#if (gt currentPage 1)}}
+              <button data-page="{{subtract currentPage 1}}" data-type="{{currentType}}" data-search="{{currentSearch}}" data-region="{{currentRegion}}" data-min-price="{{currentMinPrice}}" data-max-price="{{currentMaxPrice}}" data-start-date="{{currentStartDate}}" data-end-date="{{currentEndDate}}" data-sort-by="{{currentSortBy}}" data-min-duration="{{currentMinDuration}}" data-max-duration="{{currentMaxDuration}}" data-difficulties="{{currentDifficulties}}" data-amenities="{{currentAmenities}}" data-min-group-size="{{currentMinGroupSize}}" data-max-group-size="{{currentMaxGroupSize}}" class="pagination-btn px-4 py-2 mx-1 bg-gray-200 rounded">Предыдущая</button>
+            {{else}}
+              <span class="pagination-btn px-4 py-2 mx-1 bg-gray-200 rounded opacity-50 cursor-not-allowed">Предыдущая</span>
+            {{/if}}
+            {{#each (range 1 totalPages)}}
+              <button data-page="{{this}}" data-type="{{../currentType}}" data-search="{{../currentSearch}}" data-region="{{../currentRegion}}" data-min-price="{{../currentMinPrice}}" data-max-price="{{../currentMaxPrice}}" data-start-date="{{../currentStartDate}}" data-end-date="{{../currentEndDate}}" data-sort-by="{{../currentSortBy}}" data-min-duration="{{../currentMinDuration}}" data-max-duration="{{../currentMaxDuration}}" data-difficulties="{{../currentDifficulties}}" data-amenities="{{../currentAmenities}}" data-min-group-size="{{../currentMinGroupSize}}" data-max-group-size="{{../currentMaxGroupSize}}" class="pagination-btn px-4 py-2 mx-1 rounded {{eq ../currentPage this 'bg-blue-600 text-white' 'bg-gray-200 text-gray-800'}}">{{this}}</button>
+            {{/each}}
+            {{#if (lt currentPage totalPages)}}
+              <button data-page="{{add currentPage 1}}" data-type="{{currentType}}" data-search="{{currentSearch}}" data-region="{{currentRegion}}" data-min-price="{{currentMinPrice}}" data-max-price="{{currentMaxPrice}}" data-start-date="{{currentStartDate}}" data-end-date="{{currentEndDate}}" data-sort-by="{{currentSortBy}}" data-min-duration="{{currentMinDuration}}" data-max-duration="{{currentMaxDuration}}" data-difficulties="{{currentDifficulties}}" data-amenities="{{currentAmenities}}" data-min-group-size="{{currentMinGroupSize}}" data-max-group-size="{{currentMaxGroupSize}}" class="pagination-btn px-4 py-2 mx-1 bg-gray-200 rounded">Следующая</button>
+            {{else}}
+              <span class="pagination-btn px-4 py-2 mx-1 bg-gray-200 rounded opacity-50 cursor-not-allowed">Следующая</span>
+            {{/if}}
+          </div>
+          <p class="text-center text-gray-600 col-span-3">Страница: {{currentPage}} из {{totalPages}} (Туров на странице: {{toursOnPage}}, Всего туров: {{totalTours}})</p>
+        </div>
+      {{/if}}
+
+      <p class="text-center mt-4">Страница: {{currentPage}} из {{totalPages}} (Туров на странице: {{toursOnPage}}, Всего туров: {{totalTours}})</p>
+    </div>
+  </section>
+
+  {{> footer}}
+
+  <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"></script>
+  <!-- <script src="/js/main.js"></script> -->
+  <script src="/js/tours.js"></script>
+</body>
+</html>
