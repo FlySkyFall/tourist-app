@@ -116,6 +116,52 @@ exports.deleteTour = async (req, res) => {
   }
 };
 
+exports.getTourReviews = async (req, res) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      req.flash('error', 'Неверный идентификатор тура');
+      return res.redirect('/admin/tours');
+    }
+    const tour = await Tour.findById(req.params.id).populate('reviews.userId', 'username').lean();
+    if (!tour) {
+      req.flash('error', 'Тур не найден');
+      return res.redirect('/admin/tours');
+    }
+    res.render('admin/reviews', {
+      tour,
+      user: req.user,
+      message: req.flash('success') || req.flash('error'),
+    });
+  } catch (error) {
+    console.error('Error in getTourReviews:', error.message, error.stack);
+    req.flash('error', 'Ошибка загрузки отзывов');
+    res.redirect('/admin/tours');
+  }
+};
+
+exports.deleteReview = async (req, res) => {
+  try {
+    const { tourId, reviewId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(tourId) || !mongoose.Types.ObjectId.isValid(reviewId)) {
+      req.flash('error', 'Неверный идентификатор');
+      return res.redirect('/admin/tours');
+    }
+    const tour = await Tour.findById(tourId);
+    if (!tour) {
+      req.flash('error', 'Тур не найден');
+      return res.redirect('/admin/tours');
+    }
+    tour.reviews = tour.reviews.filter(review => review._id.toString() !== reviewId);
+    await tour.save();
+    req.flash('success', 'Отзыв успешно удалён');
+    res.redirect(`/admin/tours/${tourId}/reviews`);
+  } catch (error) {
+    console.error('Error in deleteReview:', error.message, error.stack);
+    req.flash('error', 'Ошибка удаления отзыва');
+    res.redirect(`/admin/tours/${req.params.tourId}/reviews`);
+  }
+};
+
 exports.getBookings = async (req, res) => {
   try {
     const bookings = await Booking.find()

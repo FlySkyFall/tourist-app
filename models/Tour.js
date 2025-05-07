@@ -42,6 +42,12 @@ const tourSchema = new mongoose.Schema({
   images: [{ type: String }],
   rating: { type: Number, default: 0, min: 0, max: 5 },
   reviewsCount: { type: Number, default: 0 },
+  reviews: [{
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    rating: { type: Number, min: 1, max: 5, required: true },
+    comment: { type: String, required: true },
+    createdAt: { type: Date, default: Date.now },
+  }],
   isFeatured: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
@@ -49,7 +55,18 @@ const tourSchema = new mongoose.Schema({
 
 tourSchema.pre('save', function (next) {
   this.updatedAt = Date.now();
+  // Пересчёт рейтинга и количества отзывов
+  if (this.reviews && this.reviews.length > 0) {
+    const avgRating = this.reviews.reduce((sum, r) => sum + r.rating, 0) / this.reviews.length;
+    this.rating = Math.round(avgRating * 10) / 10; // Округление до 1 знака
+    this.reviewsCount = this.reviews.length;
+  } else {
+    this.rating = 0;
+    this.reviewsCount = 0;
+  }
   next();
 });
+
+tourSchema.index({ 'reviews.userId': 1 }); // Для проверки уникальности отзывов
 
 module.exports = mongoose.model('Tour', tourSchema);

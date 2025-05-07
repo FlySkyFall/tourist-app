@@ -92,7 +92,6 @@ exports.getTours = async (req, res) => {
       sortOptions[field] = direction === 'asc' ? 1 : -1;
     }
 
-    // Получение уникального списка удобств
     const amenitiesList = await Tour.distinct('accommodation.amenities');
 
     console.log('getTours query:', JSON.stringify(query), 'sort:', JSON.stringify(sortOptions), 'amenitiesList:', amenitiesList);
@@ -278,16 +277,57 @@ exports.getTourById = async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
       return res.status(404).render('error', { message: 'Неверный идентификатор тура' });
     }
-    const tour = await Tour.findById(req.params.id).lean();
+    const tour = await Tour.findById(req.params.id).populate('reviews.userId', 'username').lean();
     if (!tour) {
       return res.status(404).render('error', { message: 'Тур не найден' });
     }
+    const hasReviewed = req.user ? tour.reviews.some(review => review.userId._id.toString() === req.user._id.toString()) : false;
     res.render('tours/tour', {
       tour,
       user: req.user || null,
+      hasReviewed,
+      error: null,
     });
   } catch (error) {
     console.error('Error in getTourById:', error.message, error.stack);
     res.status(500).render('error', { message: 'Ошибка загрузки тура' });
+  }
+};
+
+exports.addReview = async (req, res) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(404).render('error', { message: 'Неверный идентификатор тура' });
+    }
+    const tour = await Tour.findById(req.params.id);
+    if (!tour) {
+      return res.status(404).render('error', { message: 'Тур не найден' });
+    }
+    // Проверка, оставлял ли пользователь отзыв
+    const existingReview = tour.reviews.find(review => review.userId.toString() === req.user._id.toString());
+    if (existingReview) {
+      return res.status(400).render('tours/tour', {
+        tour: tour.toObject(),
+        user: req.user || null,
+        hasReviewed: true,
+        error: 'Вы уже оставили отзыв для этого тура',
+      });
+    }
+    const { rating, comment } = req.body;
+    tour.reviews.push({
+      userId: req.user._id,
+      rating: parseInt(rating),
+      comment,
+    });
+    await tour.save();
+    res.redirect(`/tours/${req.params.id}`);
+  } catch (error) {
+    console.error('Error in addReview:', error.message, error.stack);
+    res.status(500).render('tours/tour', {
+      tour: tour ? tour.toObject() : null,
+      user: req.user || null,
+      hasReviewed: false,
+      error: 'Ошибка добавления отзыва',
+    });
   }
 };

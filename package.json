@@ -1,11 +1,9 @@
 {
   "dependencies": {
+    "@faker-js/faker": "^9.7.0",
     "bcrypt": "^5.1.1",
     "connect-flash": "^0.1.1",
-<<<<<<< HEAD
     "csurf": "^1.10.0",
-=======
->>>>>>> 25962f5 (Мой локальный коммит: проект с изменениями)
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
     "express-handlebars": "^8.0.1",

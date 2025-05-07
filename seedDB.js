@@ -1,596 +1,266 @@
 const mongoose = require('mongoose');
-const dotenv = require('dotenv');
+const { Faker, ru } = require('@faker-js/faker');
+const bcrypt = require('bcrypt');
 const Tour = require('./models/Tour');
+const Booking = require('./models/Booking');
+const Category = require('./models/Category');
 const Region = require('./models/Region');
+const Review = require('./models/Review');
+const User = require('./models/User');
 
-// Загрузка переменных окружения
-dotenv.config();
+// Инициализация Faker с русской локализацией
+const faker = new Faker({ locale: [ru] });
 
 // Подключение к MongoDB
-const connectDB = require('./config/db');
-connectDB();
+const MONGO_URI = 'mongodb://localhost/tourism-krasnodar';
 
-const seedDB = async () => {
+async function connectDB() {
   try {
-    // Очистка коллекций
-    await Tour.deleteMany({});
-    await Region.deleteMany({});
-    console.log('Коллекции tours и regions очищены');
-
-    // Данные регионов
-    const regions = [
-      {
-        name: 'Кавказ',
-        description: 'Горный регион с живописными пейзажами и тропами для походов',
-        images: ['/img/region1.jpg'],
-        area: 17000,
-        climate: 'Умеренный',
-        coordinates: { lat: 43.5, lng: 41.5 },
-      },
-      {
-        name: 'Сочи',
-        description: 'Курортный город на Черноморском побережье с субтропическим климатом',
-        images: ['/img/region2.jpg'],
-        area: 3500,
-        climate: 'Субтропический',
-        coordinates: { lat: 43.6, lng: 39.7 },
-      },
-      {
-        name: 'Анапа',
-        description: 'Пляжный курорт, идеальный для семейного отдыха',
-        images: ['/img/region3.jpg'],
-        area: 1000,
-        climate: 'Средиземноморский',
-        coordinates: { lat: 44.9, lng: 37.3 },
-      },
-      {
-        name: 'Геленджик',
-        description: 'Живописный курорт с бухтами и винодельнями',
-        images: ['/img/region4.jpg'],
-        area: 1200,
-        climate: 'Средиземноморский',
-        coordinates: { lat: 44.6, lng: 38.1 },
-      },
-      {
-        name: 'Краснодар',
-        description: 'Центральный регион с культурными достопримечательностями',
-        images: ['/img/region5.jpg'],
-        area: 7500,
-        climate: 'Умеренный',
-        coordinates: { lat: 45.0, lng: 38.9 },
-      },
-    ];
-
-    // Вставка регионов
-    await Region.insertMany(regions);
-    console.log('Регионы добавлены:', regions.length);
-
-    // Данные туров
-    const tours = [
-      // Активные туры
-      {
-        title: 'Поход в горы Кавказа',
-        type: 'active',
-        price: 15000,
-        images: ['/img/tour1.jpg'],
-        description: '5-дневный треккинг по горам Кавказа',
-        isFeatured: true,
-        durationDays: 5,
-        location: { region: 'Кавказ', coordinates: { lat: 43.5, lng: 41.5 } },
-        accommodation: { type: 'camping', name: 'Горный лагерь', rating: 4, amenities: ['палатки'] },
-        activities: [{ name: 'Треккинг', durationHours: 6, equipmentRequired: true }],
-        excursions: [],
-        includedServices: ['гид', 'питание'],
-        season: { start: new Date('2025-06-01'), end: new Date('2025-09-30') },
-        minGroupSize: 4,
-        maxGroupSize: 12,
-        difficultyLevel: 'medium',
-        rating: 4.5,
-        reviewsCount: 10,
-      },
-      {
-        title: 'Восхождение на Эльбрус',
-        type: 'active',
-        price: 25000,
-        images: ['/img/tour2.jpg'],
-        description: 'Экстремальное восхождение на высшую точку России',
-        isFeatured: true,
-        durationDays: 7,
-        location: { region: 'Кавказ', coordinates: { lat: 43.4, lng: 41.6 } },
-        accommodation: { type: 'camping', name: 'Высокогорный лагерь', rating: 4.2, amenities: ['палатки'] },
-        activities: [{ name: 'Альпинизм', durationHours: 8, equipmentRequired: true }],
-        excursions: [],
-        includedServices: ['гид', 'страховка'],
-        season: { start: new Date('2025-07-01'), end: new Date('2025-08-31') },
-        minGroupSize: 6,
-        maxGroupSize: 10,
-        difficultyLevel: 'hard',
-        rating: 4.8,
-        reviewsCount: 15,
-      },
-      {
-        title: 'Велотур по предгорьям',
-        type: 'active',
-        price: 12000,
-        images: ['/img/tour3.jpg'],
-        description: 'Велосипедный тур по живописным тропам',
-        isFeatured: false,
-        durationDays: 3,
-        location: { region: 'Кавказ', coordinates: { lat: 43.6, lng: 41.4 } },
-        accommodation: { type: 'hotel', name: 'Горный приют', rating: 3.8, amenities: ['душ'] },
-        activities: [{ name: 'Велоспорт', durationHours: 5, equipmentRequired: true }],
-        excursions: [],
-        includedServices: ['гид', 'аренда велосипедов'],
-        season: { start: new Date('2025-05-01'), end: new Date('2025-10-31') },
-        minGroupSize: 5,
-        maxGroupSize: 15,
-        difficultyLevel: 'medium',
-        rating: 4.3,
-        reviewsCount: 8,
-      },
-
-      // Экскурсионные туры
-      {
-        title: 'Экскурсия по Сочи',
-        type: 'excursion',
-        price: 8000,
-        images: ['/img/tour4.jpg'],
-        description: 'Обзорная экскурсия по достопримечательностям Сочи',
-        isFeatured: true,
-        durationDays: 1,
-        location: { region: 'Сочи', coordinates: { lat: 43.6, lng: 39.7 } },
-        accommodation: { type: 'hotel', name: 'Морской бриз', rating: 4.5, amenities: ['Wi-Fi'] },
-        activities: [],
-        excursions: [{ name: 'Парк Ривьера', durationHours: 2, price: 500 }],
-        includedServices: ['транспорт', 'гид'],
-        season: { start: new Date('2025-01-01'), end: new Date('2025-12-31') },
-        minGroupSize: 2,
-        maxGroupSize: 20,
-        difficultyLevel: 'easy',
-        rating: 4.8,
-        reviewsCount: 25,
-      },
-      {
-        title: 'Исторический тур по Краснодару',
-        type: 'excursion',
-        price: 6000,
-        images: ['/img/tour5.jpg'],
-        description: 'Прогулка по историческим местам Краснодара',
-        isFeatured: true,
-        durationDays: 1,
-        location: { region: 'Краснодар', coordinates: { lat: 45.0, lng: 38.9 } },
-        accommodation: { type: 'none', name: 'Без проживания', rating: 0, amenities: [] },
-        activities: [],
-        excursions: [{ name: 'Красная улица', durationHours: 3, price: 300 }],
-        includedServices: ['гид'],
-        season: { start: new Date('2025-01-01'), end: new Date('2025-12-31') },
-        minGroupSize: 1,
-        maxGroupSize: 30,
-        difficultyLevel: 'easy',
-        rating: 4.6,
-        reviewsCount: 20,
-      },
-      {
-        title: 'Винный тур в Геленджике',
-        type: 'excursion',
-        price: 10000,
-        images: ['/img/tour6.jpg'],
-        description: 'Дегустация вин и экскурсия по винодельням',
-        isFeatured: false,
-        durationDays: 2,
-        location: { region: 'Геленджик', coordinates: { lat: 44.6, lng: 38.1 } },
-        accommodation: { type: 'hotel', name: 'Винный дом', rating: 4.7, amenities: ['Wi-Fi'] },
-        activities: [],
-        excursions: [{ name: 'Винодельня Саук-Дере', durationHours: 4, price: 1000 }],
-        includedServices: ['транспорт', 'дегустация'],
-        season: { start: new Date('2025-04-01'), end: new Date('2025-11-30') },
-        minGroupSize: 4,
-        maxGroupSize: 15,
-        difficultyLevel: 'easy',
-        rating: 4.9,
-        reviewsCount: 12,
-      },
-
-      // Кемпинг
-      {
-        title: 'Кемпинг у моря в Анапе',
-        type: 'camping',
-        price: 12000,
-        images: ['/img/tour7.jpg'],
-        description: 'Отдых на природе у Черного моря',
-        isFeatured: true,
-        durationDays: 3,
-        location: { region: 'Анапа', coordinates: { lat: 44.9, lng: 37.3 } },
-        accommodation: { type: 'camping', name: 'Пляжный лагерь', rating: 4, amenities: ['душ'] },
-        activities: [{ name: 'Каякинг', durationHours: 3, equipmentRequired: true }],
-        excursions: [],
-        includedServices: ['питание', 'палатки'],
-        season: { start: new Date('2025-05-01'), end: new Date('2025-10-31') },
-        minGroupSize: 5,
-        maxGroupSize: 15,
-        difficultyLevel: 'easy',
-        rating: 4.2,
-        reviewsCount: 8,
-      },
-      {
-        title: 'Кемпинг в Геленджике',
-        type: 'camping',
-        price: 11000,
-        images: ['/img/tour8.jpg'],
-        description: 'Кемпинг в живописной бухте Геленджика',
-        isFeatured: false,
-        durationDays: 3,
-        location: { region: 'Геленджик', coordinates: { lat: 44.6, lng: 38.1 } },
-        accommodation: { type: 'camping', name: 'Бухта лагерь', rating: 4.1, amenities: ['туалет'] },
-        activities: [{ name: 'Сноркелинг', durationHours: 2, equipmentRequired: true }],
-        excursions: [],
-        includedServices: ['питание'],
-        season: { start: new Date('2025-06-01'), end: new Date('2025-09-30') },
-        minGroupSize: 4,
-        maxGroupSize: 12,
-        difficultyLevel: 'easy',
-        rating: 4.4,
-        reviewsCount: 10,
-      },
-      {
-        title: 'Лесной кемпинг на Кавказе',
-        type: 'camping',
-        price: 13000,
-        images: ['/img/tour9.jpg'],
-        description: 'Кемпинг в лесах Кавказских гор',
-        isFeatured: false,
-        durationDays: 4,
-        location: { region: 'Кавказ', coordinates: { lat: 43.7, lng: 41.3 } },
-        accommodation: { type: 'camping', name: 'Лесной лагерь', rating: 3.9, amenities: ['костровая зона'] },
-        activities: [{ name: 'Пешие прогулки', durationHours: 4, equipmentRequired: false }],
-        excursions: [],
-        includedServices: ['питание'],
-        season: { start: new Date('2025-05-01'), end: new Date('2025-10-31') },
-        minGroupSize: 6,
-        maxGroupSize: 18,
-        difficultyLevel: 'medium',
-        rating: 4.3,
-        reviewsCount: 7,
-      },
-
-      // Оздоровительные туры
-      {
-        title: 'Спа-тур в Сочи',
-        type: 'health',
-        price: 20000,
-        images: ['/img/tour10.jpg'],
-        description: 'Оздоровительный отдых в спа-центре Сочи',
-        isFeatured: true,
-        durationDays: 5,
-        location: { region: 'Сочи', coordinates: { lat: 43.6, lng: 39.8 } },
-        accommodation: { type: 'hotel', name: 'Спа-отель', rating: 4.8, amenities: ['бассейн', 'Wi-Fi'] },
-        activities: [{ name: 'Спа-процедуры', durationHours: 3, equipmentRequired: false }],
-        excursions: [],
-        includedServices: ['питание', 'спа'],
-        season: { start: new Date('2025-01-01'), end: new Date('2025-12-31') },
-        minGroupSize: 2,
-        maxGroupSize: 10,
-        difficultyLevel: 'easy',
-        rating: 4.7,
-        reviewsCount: 18,
-      },
-      {
-        title: 'Йога-ретрит в Краснодаре',
-        type: 'health',
-        price: 18000,
-        images: ['/img/tour11.jpg'],
-        description: 'Йога и медитация в экологичной зоне',
-        isFeatured: false,
-        durationDays: 4,
-        location: { region: 'Краснодар', coordinates: { lat: 45.1, lng: 38.9 } },
-        accommodation: { type: 'retreat', name: 'Йога-центр', rating: 4.5, amenities: ['вегетарианское питание'] },
-        activities: [{ name: 'Йога', durationHours: 2, equipmentRequired: false }],
-        excursions: [],
-        includedServices: ['питание', 'инструктор'],
-        season: { start: new Date('2025-03-01'), end: new Date('2025-11-30') },
-        minGroupSize: 3,
-        maxGroupSize: 12,
-        difficultyLevel: 'easy',
-        rating: 4.6,
-        reviewsCount: 14,
-      },
-      {
-        title: 'Санаторный отдых в Анапе',
-        type: 'health',
-        price: 22000,
-        images: ['/img/tour12.jpg'],
-        description: 'Лечение и отдых в санатории Анапы',
-        isFeatured: false,
-        durationDays: 7,
-        location: { region: 'Анапа', coordinates: { lat: 44.9, lng: 37.4 } },
-        accommodation: { type: 'sanatorium', name: 'Морской санаторий', rating: 4.3, amenities: ['медицинские процедуры'] },
-        activities: [{ name: 'Физиотерапия', durationHours: 2, equipmentRequired: false }],
-        excursions: [],
-        includedServices: ['питание', 'лечение'],
-        season: { start: new Date('2025-01-01'), end: new Date('2025-12-31') },
-        minGroupSize: 1,
-        maxGroupSize: 20,
-        difficultyLevel: 'easy',
-        rating: 4.4,
-        reviewsCount: 16,
-      },
-
-      // Пассивные туры
-      {
-        title: 'Пляжный отдых в Сочи',
-        type: 'passive',
-        price: 10000,
-        images: ['/img/tour13.jpg'],
-        description: 'Расслабленный отдых на пляжах Сочи',
-        isFeatured: true,
-        durationDays: 3,
-        location: { region: 'Сочи', coordinates: { lat: 43.5, lng: 39.7 } },
-        accommodation: { type: 'hotel', name: 'Пляжный отель', rating: 4.6, amenities: ['бассейн'] },
-        activities: [],
-        excursions: [],
-        includedServices: ['питание'],
-        season: { start: new Date('2025-05-01'), end: new Date('2025-10-31') },
-        minGroupSize: 1,
-        maxGroupSize: 50,
-        difficultyLevel: 'easy',
-        rating: 4.5,
-        reviewsCount: 22,
-      },
-      {
-        title: 'Пляжный отдых в Геленджике',
-        type: 'passive',
-        price: 9500,
-        images: ['/img/tour14.jpg'],
-        description: 'Спокойный отдых на берегу моря',
-        isFeatured: false,
-        durationDays: 3,
-        location: { region: 'Геленджик', coordinates: { lat: 44.6, lng: 38.2 } },
-        accommodation: { type: 'hotel', name: 'Морской отель', rating: 4.4, amenities: ['Wi-Fi'] },
-        activities: [],
-        excursions: [],
-        includedServices: ['питание'],
-        season: { start: new Date('2025-06-01'), end: new Date('2025-09-30') },
-        minGroupSize: 1,
-        maxGroupSize: 40,
-        difficultyLevel: 'easy',
-        rating: 4.3,
-        reviewsCount: 19,
-      },
-      {
-        title: 'Отдых в Краснодаре',
-        type: 'passive',
-        price: 8500,
-        images: ['/img/tour15.jpg'],
-        description: 'Спокойный отдых в городской среде',
-        isFeatured: false,
-        durationDays: 2,
-        location: { region: 'Краснодар', coordinates: { lat: 45.0, lng: 39.0 } },
-        accommodation: { type: 'hotel', name: 'Городской отель', rating: 4.2, amenities: ['Wi-Fi'] },
-        activities: [],
-        excursions: [],
-        includedServices: ['питание'],
-        season: { start: new Date('2025-01-01'), end: new Date('2025-12-31') },
-        minGroupSize: 1,
-        maxGroupSize: 30,
-        difficultyLevel: 'easy',
-        rating: 4.1,
-        reviewsCount: 15,
-      },
-      // Дополнительные туры для пагинации
-      {
-        title: 'Поход в горы 4',
-        type: 'active',
-        price: 16000,
-        images: ['/img/tour16.jpg'],
-        description: 'Еще один активный тур по Кавказу',
-        isFeatured: false,
-        durationDays: 5,
-        location: { region: 'Кавказ', coordinates: { lat: 43.5, lng: 41.5 } },
-        accommodation: { type: 'camping', name: 'Горный лагерь', rating: 4, amenities: ['палатки'] },
-        activities: [{ name: 'Треккинг', durationHours: 6, equipmentRequired: true }],
-        excursions: [],
-        includedServices: ['гид', 'питание'],
-        season: { start: new Date('2025-06-01'), end: new Date('2025-09-30') },
-        minGroupSize: 4,
-        maxGroupSize: 12,
-        difficultyLevel: 'medium',
-        rating: 4.5,
-        reviewsCount: 10,
-      },
-      {
-        title: 'Экскурсия по Сочи 4',
-        type: 'excursion',
-        price: 8500,
-        images: ['/img/tour17.jpg'],
-        description: 'Еще одна экскурсия по Сочи',
-        isFeatured: false,
-        durationDays: 1,
-        location: { region: 'Сочи', coordinates: { lat: 43.6, lng: 39.7 } },
-        accommodation: { type: 'none', name: 'Без проживания', rating: 0, amenities: [] },
-        activities: [],
-        excursions: [{ name: 'Олимпийский парк', durationHours: 3, price: 400 }],
-        includedServices: ['гид'],
-        season: { start: new Date('2025-01-01'), end: new Date('2025-12-31') },
-        minGroupSize: 1,
-        maxGroupSize: 30,
-        difficultyLevel: 'easy',
-        rating: 4.6,
-        reviewsCount: 20,
-      },
-      {
-        title: 'Кемпинг у моря 4',
-        type: 'camping',
-        price: 12500,
-        images: ['/img/tour18.jpg'],
-        description: 'Еще один кемпинг в Анапе',
-        isFeatured: false,
-        durationDays: 3,
-        location: { region: 'Анапа', coordinates: { lat: 44.9, lng: 37.3 } },
-        accommodation: { type: 'camping', name: 'Пляжный лагерь', rating: 4, amenities: ['душ'] },
-        activities: [{ name: 'Каякинг', durationHours: 3, equipmentRequired: true }],
-        excursions: [],
-        includedServices: ['питание', 'палатки'],
-        season: { start: new Date('2025-05-01'), end: new Date('2025-10-31') },
-        minGroupSize: 5,
-        maxGroupSize: 15,
-        difficultyLevel: 'easy',
-        rating: 4.2,
-        reviewsCount: 8,
-      },
-      {
-        title: 'Спа-тур в Геленджике',
-        type: 'health',
-        price: 21000,
-        images: ['/img/tour19.jpg'],
-        description: 'Оздоровительный отдых в Геленджике',
-        isFeatured: false,
-        durationDays: 5,
-        location: { region: 'Геленджик', coordinates: { lat: 44.6, lng: 38.1 } },
-        accommodation: { type: 'hotel', name: 'Спа-отель', rating: 4.8, amenities: ['бассейн', 'Wi-Fi'] },
-        activities: [{ name: 'Спа-процедуры', durationHours: 3, equipmentRequired: false }],
-        excursions: [],
-        includedServices: ['питание', 'спа'],
-        season: { start: new Date('2025-01-01'), end: new Date('2025-12-31') },
-        minGroupSize: 2,
-        maxGroupSize: 10,
-        difficultyLevel: 'easy',
-        rating: 4.7,
-        reviewsCount: 18,
-      },
-      {
-        title: 'Пляжный отдых в Анапе',
-        type: 'passive',
-        price: 10500,
-        images: ['/img/tour20.jpg'],
-        description: 'Расслабленный отдых на пляжах Анапы',
-        isFeatured: false,
-        durationDays: 3,
-        location: { region: 'Анапа', coordinates: { lat: 44.9, lng: 37.3 } },
-        accommodation: { type: 'hotel', name: 'Пляжный отель', rating: 4.6, amenities: ['бассейн'] },
-        activities: [],
-        excursions: [],
-        includedServices: ['питание'],
-        season: { start: new Date('2025-05-01'), end: new Date('2025-10-31') },
-        minGroupSize: 1,
-        maxGroupSize: 50,
-        difficultyLevel: 'easy',
-        rating: 4.5,
-        reviewsCount: 22,
-      },
-      {
-        title: 'Поход в горы 5',
-        type: 'active',
-        price: 17000,
-        images: ['/img/tour21.jpg'],
-        description: 'Треккинг по новым маршрутам Кавказа',
-        isFeatured: false,
-        durationDays: 5,
-        location: { region: 'Кавказ', coordinates: { lat: 43.5, lng: 41.5 } },
-        accommodation: { type: 'camping', name: 'Горный лагерь', rating: 4, amenities: ['палатки'] },
-        activities: [{ name: 'Треккинг', durationHours: 6, equipmentRequired: true }],
-        excursions: [],
-        includedServices: ['гид', 'питание'],
-        season: { start: new Date('2025-06-01'), end: new Date('2025-09-30') },
-        minGroupSize: 4,
-        maxGroupSize: 12,
-        difficultyLevel: 'medium',
-        rating: 4.5,
-        reviewsCount: 10,
-      },
-      {
-        title: 'Экскурсия по Краснодару 2',
-        type: 'excursion',
-        price: 6500,
-        images: ['/img/tour22.jpg'],
-        description: 'Вторая экскурсия по Краснодару',
-        isFeatured: false,
-        durationDays: 1,
-        location: { region: 'Краснодар', coordinates: { lat: 45.0, lng: 38.9 } },
-        accommodation: { type: 'none', name: 'Без проживания', rating: 0, amenities: [] },
-        activities: [],
-        excursions: [{ name: 'Парк Галицкого', durationHours: 3, price: 300 }],
-        includedServices: ['гид'],
-        season: { start: new Date('2025-01-01'), end: new Date('2025-12-31') },
-        minGroupSize: 1,
-        maxGroupSize: 30,
-        difficultyLevel: 'easy',
-        rating: 4.6,
-        reviewsCount: 20,
-      },
-      {
-        title: 'Кемпинг в Сочи',
-        type: 'camping',
-        price: 11500,
-        images: ['/img/tour23.jpg'],
-        description: 'Кемпинг на природе в Сочи',
-        isFeatured: false,
-        durationDays: 3,
-        location: { region: 'Сочи', coordinates: { lat: 43.6, lng: 39.7 } },
-        accommodation: { type: 'camping', name: 'Лесной лагерь', rating: 4, amenities: ['душ'] },
-        activities: [{ name: 'Пешие прогулки', durationHours: 3, equipmentRequired: false }],
-        excursions: [],
-        includedServices: ['питание', 'палатки'],
-        season: { start: new Date('2025-05-01'), end: new Date('2025-10-31') },
-        minGroupSize: 5,
-        maxGroupSize: 15,
-        difficultyLevel: 'easy',
-        rating: 4.2,
-        reviewsCount: 8,
-      },
-      {
-        title: 'Йога-ретрит в Геленджике',
-        type: 'health',
-        price: 19000,
-        images: ['/img/tour24.jpg'],
-        description: 'Йога и медитация в Геленджике',
-        isFeatured: false,
-        durationDays: 4,
-        location: { region: 'Геленджик', coordinates: { lat: 44.6, lng: 38.1 } },
-        accommodation: { type: 'retreat', name: 'Йога-центр', rating: 4.5, amenities: ['вегетарианское питание'] },
-        activities: [{ name: 'Йога', durationHours: 2, equipmentRequired: false }],
-        excursions: [],
-        includedServices: ['питание', 'инструктор'],
-        season: { start: new Date('2025-03-01'), end: new Date('2025-11-30') },
-        minGroupSize: 3,
-        maxGroupSize: 12,
-        difficultyLevel: 'easy',
-        rating: 4.6,
-        reviewsCount: 14,
-      },
-      {
-        title: 'Пляжный отдых в Краснодаре',
-        type: 'passive',
-        price: 9000,
-        images: ['/img/tour25.jpg'],
-        description: 'Спокойный отдых в пригороде Краснодара',
-        isFeatured: false,
-        durationDays: 2,
-        location: { region: 'Краснодар', coordinates: { lat: 45.0, lng: 38.9 } },
-        accommodation: { type: 'hotel', name: 'Городской отель', rating: 4.2, amenities: ['Wi-Fi'] },
-        activities: [],
-        excursions: [],
-        includedServices: ['питание'],
-        season: { start: new Date('2025-01-01'), end: new Date('2025-12-31') },
-        minGroupSize: 1,
-        maxGroupSize: 30,
-        difficultyLevel: 'easy',
-        rating: 4.1,
-        reviewsCount: 15,
-      },
-    ];
-
-    // Вставка туров
-    await Tour.insertMany(tours);
-    console.log('Туры добавлены:', tours.length);
-    console.log('Популярные туры (isFeatured: true):', (await Tour.countDocuments({ isFeatured: true })));
-
-    console.log('База данных успешно заполнена!');
+    await mongoose.connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true });
+    console.log('Connected to MongoDB');
   } catch (error) {
-    console.error('Ошибка заполнения базы данных:', error);
-  } finally {
-    mongoose.connection.close();
+    console.error('MongoDB connection error:', error);
+    process.exit(1);
   }
-};
+}
 
-// Выполнение скрипта
-seedDB();
+// Очистка коллекций
+async function clearCollections() {
+  const collections = [Tour, Booking, Category, Region, Review, User];
+  for (const Model of collections) {
+    await Model.deleteMany({});
+    console.log(`${Model.modelName} collection cleared`);
+  }
+}
+
+// Генерация пользователей
+async function createUsers() {
+  const users = [];
+  const roles = ['admin', 'moderator', ...Array(8).fill('user')];
+
+  for (let i = 0; i < 10; i++) {
+    const username = faker.internet.userName();
+    const email = faker.internet.email();
+    const passwordHash = await bcrypt.hash('password123', 10);
+    const user = new User({
+      username,
+      email,
+      passwordHash,
+      role: roles[i],
+      profile: {
+        firstName: faker.person.firstName(),
+        lastName: faker.person.lastName(),
+        phone: faker.phone.number(),
+        preferences: [faker.helpers.arrayElement(['active', 'camping', 'health', 'excursion'])],
+      },
+    });
+    await user.save();
+    users.push(user);
+    console.log(`Created user: ${username}`);
+  }
+  return users;
+}
+
+// Генерация регионов
+async function createRegions() {
+  const regions = [];
+  const regionNames = ['Краснодарский край', 'Ростовская область', 'Ставропольский край', 'Республика Адыгея', 'Кабардино-Балкария'];
+
+  for (let i = 0; i < 5; i++) {
+    const region = new Region({
+      name: regionNames[i],
+      description: faker.lorem.paragraph(),
+      attractions: [faker.lorem.words(3), faker.lorem.words(3)],
+      climate: faker.helpers.arrayElement(['умеренный', 'субтропический', 'горный']),
+      bestSeason: faker.helpers.arrayElement(['лето', 'весна', 'осень', 'зима']),
+      images: [faker.image.url()],
+      coordinates: {
+        lat: faker.location.latitude(),
+        lng: faker.location.longitude(),
+      },
+    });
+    await region.save();
+    regions.push(region);
+    console.log(`Created region: ${region.name}`);
+  }
+  return regions;
+}
+
+// Генерация категорий
+async function createCategories(tours) {
+  const categories = [];
+  const categoryNames = ['Активный отдых', 'Экскурсии', 'Кемпинг', 'Оздоровление', 'Пассивный отдых'];
+
+  for (let i = 0; i < 5; i++) {
+    const category = new Category({
+      name: categoryNames[i],
+      description: faker.lorem.sentence(),
+      icon: faker.image.url(),
+      subcategories: [faker.lorem.word(), faker.lorem.word()],
+      featuredTours: faker.helpers.arrayElements(tours, 3).map(tour => tour._id),
+    });
+    await category.save();
+    categories.push(category);
+    console.log(`Created category: ${category.name}`);
+  }
+  return categories;
+}
+
+// Генерация туров
+async function createTours(regions, users) {
+  const tours = [];
+  const types = ['active', 'passive', 'camping', 'excursion', 'health'];
+  const accommodationTypes = ['hotel', 'sanatorium', 'camping', 'retreat', 'none'];
+  const difficultyLevels = ['easy', 'medium', 'hard'];
+
+  for (let i = 0; i < 20; i++) {
+    const region = faker.helpers.arrayElement(regions);
+    const tour = new Tour({
+      title: `Тур ${faker.lorem.words(2)}`,
+      description: faker.lorem.paragraph(),
+      type: faker.helpers.arrayElement(types),
+      durationDays: faker.number.int({ min: 1, max: 14 }),
+      price: faker.number.int({ min: 5000, max: 50000 }),
+      location: {
+        region: region.name,
+        coordinates: {
+          lat: region.coordinates.lat + faker.number.float({ min: -0.1, max: 0.1 }),
+          lng: region.coordinates.lng + faker.number.float({ min: -0.1, max: 0.1 }),
+        },
+      },
+      accommodation: {
+        type: faker.helpers.arrayElement(accommodationTypes),
+        name: faker.company.name(),
+        rating: faker.number.int({ min: 0, max: 5 }),
+        amenities: [faker.lorem.word(), faker.lorem.word()],
+      },
+      activities: [
+        {
+          name: faker.lorem.words(2),
+          description: faker.lorem.sentence(),
+          durationHours: faker.number.int({ min: 1, max: 8 }),
+          equipmentRequired: faker.datatype.boolean(),
+        },
+      ],
+      excursions: [
+        {
+          name: faker.lorem.words(2),
+          description: faker.lorem.sentence(),
+          durationHours: faker.number.int({ min: 1, max: 4 }),
+          price: faker.number.int({ min: 1000, max: 10000 }),
+        },
+      ],
+      includedServices: [faker.lorem.word(), faker.lorem.word()],
+      season: {
+        start: faker.date.soon(),
+        end: faker.date.future(),
+      },
+      minGroupSize: faker.number.int({ min: 1, max: 5 }),
+      maxGroupSize: faker.number.int({ min: 6, max: 20 }),
+      difficultyLevel: faker.helpers.arrayElement(difficultyLevels),
+      images: [faker.image.url()],
+      isFeatured: faker.datatype.boolean(),
+      reviews: faker.helpers.arrayElements(users, faker.number.int({ min: 0, max: 3 })).map(user => ({
+        userId: user._id,
+        rating: faker.number.int({ min: 1, max: 5 }),
+        comment: faker.lorem.sentence(),
+      })),
+    });
+    await tour.save();
+    tours.push(tour);
+    console.log(`Created tour: ${tour.title}`);
+
+    // Обновление toursCount в регионе
+    await Region.updateOne({ _id: region._id }, { $inc: { toursCount: 1 } });
+  }
+  return tours;
+}
+
+// Генерация бронирований
+async function createBookings(users, tours) {
+  const bookings = [];
+  const statuses = ['confirmed', 'pending', 'cancelled'];
+
+  for (let i = 0; i < 15; i++) {
+    const user = faker.helpers.arrayElement(users);
+    const tour = faker.helpers.arrayElement(tours);
+    const booking = new Booking({
+      userId: user._id,
+      tourId: tour._id,
+      bookingDate: faker.date.recent(),
+      status: faker.helpers.arrayElement(statuses),
+      participants: faker.number.int({ min: 1, max: tour.maxGroupSize }),
+    });
+    await booking.save();
+    bookings.push(booking);
+
+    // Добавление бронирования в профиль пользователя
+    await User.updateOne(
+      { _id: user._id },
+      {
+        $push: {
+          bookings: {
+            _id: booking._id,
+            tourId: tour._id,
+            bookingDate: booking.bookingDate,
+            status: booking.status,
+            participants: booking.participants,
+          },
+        },
+      }
+    );
+    console.log(`Created booking for user: ${user.username}, tour: ${tour.title}`);
+  }
+  return bookings;
+}
+
+// Генерация отдельных отзывов (модель Review)
+async function createReviews(users, tours) {
+  const reviews = [];
+
+  for (let i = 0; i < 15; i++) {
+    const user = faker.helpers.arrayElement(users);
+    const tour = faker.helpers.arrayElement(tours);
+    const review = new Review({
+      tourId: tour._id,
+      userId: user._id,
+      rating: faker.number.int({ min: 1, max: 5 }),
+      title: faker.lorem.words(3),
+      comment: faker.lorem.paragraph(),
+      pros: faker.lorem.sentence(),
+      cons: faker.lorem.sentence(),
+      visitDate: faker.date.past(),
+      images: [faker.image.url()],
+    });
+    await review.save();
+    reviews.push(review);
+    console.log(`Created review for tour: ${tour.title}`);
+  }
+  return reviews;
+}
+
+// Основная функция заполнения
+async function seedDatabase() {
+  try {
+    await connectDB();
+    await clearCollections();
+
+    const users = await createUsers();
+    const regions = await createRegions();
+    const tours = await createTours(regions, users);
+    const categories = await createCategories(tours);
+    const bookings = await createBookings(users, tours);
+    const reviews = await createReviews(users, tours);
+
+    console.log('Database seeded successfully');
+    console.log(`Created ${users.length} users, ${regions.length} regions, ${categories.length} categories, ${tours.length} tours, ${bookings.length} bookings, ${reviews.length} reviews`);
+  } catch (error) {
+    console.error('Error seeding database:', error);
+  } finally {
+    await mongoose.disconnect();
+    console.log('Disconnected from MongoDB');
+  }
+}
+
+// Запуск скрипта
+seedDatabase();

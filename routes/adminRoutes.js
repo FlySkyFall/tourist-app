@@ -56,6 +56,10 @@ router.post(
 );
 router.post('/tours/:id/delete', authMiddleware, adminMiddleware, adminController.deleteTour);
 
+// Управление отзывами
+router.get('/tours/:id/reviews', authMiddleware, adminMiddleware, adminController.getTourReviews);
+router.post('/tours/:tourId/reviews/:reviewId/delete', authMiddleware, adminMiddleware, adminController.deleteReview);
+
 // Управление бронированиями
 router.get('/bookings', authMiddleware, adminMiddleware, adminController.getBookings);
 router.post('/bookings/:id/confirm', authMiddleware, adminMiddleware, adminController.confirmBooking);
