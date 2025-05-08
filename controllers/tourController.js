@@ -321,6 +321,7 @@ exports.getTourAvailability = async (req, res) => {
     const { type, season, minGroupSize, maxGroupSize, hotelCapacity, durationDays } = tour;
     const startDate = new Date(season.start);
     const endDate = new Date(season.end);
+    const currentDate = new Date();
     const availability = [];
 
     // Получение бронирований
@@ -332,17 +333,37 @@ exports.getTourAvailability = async (req, res) => {
 
     // Агрегация бронирований по датам
     const bookingsByDate = bookings.reduce((acc, booking) => {
-      const dateStr = booking.tourDate.toISOString().split('T')[0];
-      acc[dateStr] = (acc[dateStr] || 0) + booking.participants;
+      const tourDate = new Date(booking.tourDate);
+      // Проверяем, не истёк ли тур (tourDate + durationDays <= currentDate)
+      const tourEndDate = new Date(tourDate);
+      tourEndDate.setDate(tourEndDate.getDate() + durationDays);
+      if (tourEndDate > currentDate) {
+        // Для пассивных и оздоровительных туров учитываем все даты тура
+        if (['passive', 'health'].includes(type)) {
+          for (let i = 0; i < durationDays; i++) {
+            const currentTourDate = new Date(tourDate);
+            currentTourDate.setDate(tourDate.getDate() + i);
+            // Учитываем только даты в пределах сезона
+            if (currentTourDate >= startDate && currentTourDate <= endDate) {
+              const dateStr = currentTourDate.toISOString().split('T')[0];
+              acc[dateStr] = (acc[dateStr] || 0) + booking.participants;
+            }
+          }
+        } else {
+          // Для других типов туров учитываем только tourDate
+          const dateStr = tourDate.toISOString().split('T')[0];
+          acc[dateStr] = (acc[dateStr] || 0) + booking.participants;
+        }
+      }
       return acc;
     }, {});
 
     if (['passive', 'health'].includes(type)) {
-      // Для пассивного и оздоровительного отдыха учитываем hotelCapacity
+      // Для пассивного и оздоровительного отдыха учитываем только hotelCapacity
       for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
         const dateStr = d.toISOString().split('T')[0];
         const bookedParticipants = bookingsByDate[dateStr] || 0;
-        const availableSlots = Math.min(maxGroupSize, hotelCapacity) - bookedParticipants;
+        const availableSlots = hotelCapacity - bookedParticipants;
         availability.push({
           start: dateStr,
           title: availableSlots >= minGroupSize ? `Доступно: ${availableSlots}` : 'Недоступно',
@@ -364,6 +385,8 @@ exports.getTourAvailability = async (req, res) => {
         });
       }
     }
+
+    console.log('getTourAvailability result:', { tourId: req.params.id, type, availability });
 
     res.json(availability);
   } catch (error) {
