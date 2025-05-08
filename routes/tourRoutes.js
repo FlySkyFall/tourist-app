@@ -7,6 +7,7 @@ const { body, validationResult } = require('express-validator');
 router.get('/', tourController.getTours);
 router.get('/filter', tourController.filterTours);
 router.get('/:id', tourController.getTourById);
+router.get('/:id/availability', tourController.getTourAvailability);
 router.post(
   '/:id/reviews',
   authMiddleware,

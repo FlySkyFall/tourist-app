@@ -9,14 +9,14 @@ exports.createBooking = async (req, res) => {
       return res.status(401).json({ error: 'Требуется авторизация' });
     }
 
-    const { tourId, bookingDate, participants } = req.body;
+    const { tourId, tourDate, participants } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(tourId)) {
       return res.status(400).json({ error: 'Неверный идентификатор тура' });
     }
 
-    if (!bookingDate) {
-      return res.status(400).json({ error: 'Дата бронирования обязательна' });
+    if (!tourDate) {
+      return res.status(400).json({ error: 'Дата проведения тура обязательна' });
     }
 
     if (!participants || participants < 1) {
@@ -28,12 +28,12 @@ exports.createBooking = async (req, res) => {
       return res.status(404).json({ error: 'Тур не найден' });
     }
 
-    const selectedDate = new Date(bookingDate);
+    const selectedDate = new Date(tourDate);
     const seasonStart = new Date(tour.season.start);
     const seasonEnd = new Date(tour.season.end);
 
     if (selectedDate < seasonStart || selectedDate > seasonEnd) {
-      return res.statuspile(400).json({ 
+      return res.status(400).json({ 
         error: `Дата должна быть в пределах сезона: с ${seasonStart.toLocaleDateString('ru-RU')} по ${seasonEnd.toLocaleDateString('ru-RU')}` 
       });
     }
@@ -47,7 +47,7 @@ exports.createBooking = async (req, res) => {
     // Проверка доступных мест
     const existingBookings = await Booking.find({
       tourId,
-      bookingDate: {
+      tourDate: {
         $gte: new Date(selectedDate.setHours(0, 0, 0, 0)),
         $lt: new Date(selectedDate.setHours(23, 59, 59, 999)),
       },
@@ -64,20 +64,21 @@ exports.createBooking = async (req, res) => {
     const booking = new Booking({
       userId: req.user._id,
       tourId,
-      bookingDate: selectedDate,
+      bookingDate: new Date(),
+      tourDate: selectedDate,
       participants,
       status: 'pending',
     });
 
     await booking.save();
 
-    // Добавление бронирования в массив bookings пользователя
     await User.findByIdAndUpdate(req.user._id, {
       $push: {
         bookings: {
           _id: booking._id,
           tourId,
-          bookingDate: selectedDate,
+          bookingDate: new Date(),
+          tourDate: selectedDate,
           status: 'pending',
           participants,
         },
@@ -101,10 +102,8 @@ exports.getUserBookings = async (req, res) => {
       .populate('tourId', 'title')
       .lean();
 
-    // Отладка данных bookings
     console.log('Fetched bookings:', bookings.map(b => ({ _id: b._id, tourId: b.tourId, status: b.status })));
 
-    // Проверка валидности _id
     const invalidBookings = bookings.filter(b => !mongoose.Types.ObjectId.isValid(b._id));
     if (invalidBookings.length > 0) {
       console.warn('Invalid booking IDs found:', invalidBookings);
@@ -147,7 +146,6 @@ exports.cancelBooking = async (req, res) => {
     await booking.save();
     console.log('Booking status updated to cancelled:', booking);
 
-    // Обновление статуса в массиве bookings пользователя
     const userUpdateResult = await User.updateOne(
       { _id: req.user._id, 'bookings._id': bookingId },
       { $set: { 'bookings.$.status': 'cancelled' } }

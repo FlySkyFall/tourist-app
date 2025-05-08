@@ -8,13 +8,13 @@ exports.getProfile = async (req, res) => {
       return res.redirect('/auth/login');
     }
 
-    // Преобразуем Mongoose-документ в обычный объект
-    const user = req.user.toObject();
-    console.log('User data sent to profile:', user); // Отладка
+    // Convert Mongoose document to plain object if necessary
+    const user = req.user.toObject ? req.user.toObject() : req.user;
+    console.log('User data sent to profile:', user); // Debugging
 
     const bookings = await Booking.find({ userId: req.user._id })
       .populate('tourId')
-      .lean(); // .lean() уже возвращает обычные объекты
+      .lean();
 
     res.render('profile', {
       user,

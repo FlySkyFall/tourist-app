@@ -173,3 +173,11 @@
 .pagination a:hover {
   background: #e0e0e0;
 }
+#calendar {
+  max-width: 900px;
+  margin: 0 auto;
+}
+#tourDate {
+  width: 100%;
+  max-width: 300px;
+}
