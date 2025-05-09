@@ -104,7 +104,7 @@ app.use(flash());
 // Инициализация CSRF-защиты
 const csrfProtection = csrf();
 app.use((req, res, next) => {
-  if (['/auth/login', '/auth/register'].includes(req.path) && req.method === 'POST') {
+  if (['/auth/login', '/auth/register', '/bookings/clean-expired'].includes(req.path) && req.method === 'POST') {
     console.log(`Bypassing CSRF protection for ${req.path}`);
     return next();
   }

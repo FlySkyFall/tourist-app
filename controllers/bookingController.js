@@ -38,9 +38,10 @@ exports.createBooking = async (req, res) => {
       });
     }
 
-    if (participants > tour.maxGroupSize) {
+    const maxCapacity = ['passive', 'health'].includes(tour.type) ? tour.hotelCapacity : tour.maxGroupSize;
+    if (participants > maxCapacity) {
       return res.status(400).json({ 
-        error: `Количество участников не может превышать ${tour.maxGroupSize}` 
+        error: `Количество участников не может превышать ${maxCapacity}` 
       });
     }
 
@@ -55,7 +56,7 @@ exports.createBooking = async (req, res) => {
     });
 
     const totalParticipants = existingBookings.reduce((sum, booking) => sum + booking.participants, 0);
-    if (totalParticipants + participants > tour.maxGroupSize) {
+    if (totalParticipants + participants > maxCapacity) {
       return res.status(400).json({ 
         error: `Недостаточно мест для ${participants} участников на выбранную дату` 
       });
@@ -160,5 +161,71 @@ exports.cancelBooking = async (req, res) => {
   } catch (error) {
     console.error('Error in cancelBooking:', error.message, error.stack);
     return res.status(500).json({ error: `Ошибка отмены бронирования: ${error.message}` });
+  }
+};
+
+exports.cleanExpiredBookings = async (req, res) => {
+  try {
+    const currentDate = new Date();
+    const expiredBookings = await Booking.aggregate([
+      {
+        $lookup: {
+          from: 'tours',
+          localField: 'tourId',
+          foreignField: '_id',
+          as: 'tour',
+        },
+      },
+      { $unwind: '$tour' },
+      {
+        $match: {
+          status: { $in: ['pending', 'confirmed'] },
+        },
+      },
+      {
+        $project: {
+          tourId: 1,
+          tourDate: 1,
+          durationDays: '$tour.durationDays',
+          endDate: {
+            $dateAdd: {
+              startDate: '$tourDate',
+              unit: 'day',
+              amount: '$tour.durationDays',
+            },
+          },
+        },
+      },
+      {
+        $match: {
+          endDate: { $lte: currentDate },
+        },
+      },
+    ]);
+
+    const bookingIds = expiredBookings.map(b => b._id);
+    console.log('Expired bookings to delete:', bookingIds);
+
+    if (bookingIds.length > 0) {
+      await Booking.deleteMany({ _id: { $in: bookingIds } });
+      await User.updateMany(
+        { 'bookings._id': { $in: bookingIds } },
+        { $pull: { bookings: { _id: { $in: bookingIds } } } }
+      );
+    }
+
+    const message = bookingIds.length > 0 
+      ? `Удалено ${bookingIds.length} истёкших бронирований`
+      : 'Нет истёкших бронирований для удаления';
+
+    if (res) {
+      return res.status(200).json({ message });
+    }
+    console.log(message);
+  } catch (error) {
+    console.error('Error in cleanExpiredBookings:', error.message, error.stack);
+    if (res) {
+      return res.status(500).json({ error: `Ошибка очистки бронирований: ${error.message}` });
+    }
   }
 };

@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
   console.log('booking.js loaded');
-  
+
   const calendarEl = document.querySelector('#calendar');
   const bookingForm = document.querySelector('#booking-form');
   const tourDateInput = document.querySelector('#tourDate');
@@ -36,7 +36,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const seasonStart = new Date(window.tourData.season.start);
   const seasonEnd = new Date(window.tourData.season.end);
   const maxGroupSize = window.tourData.maxGroupSize;
+  const minGroupSize = window.tourData.minGroupSize || 1; // Значение по умолчанию
   const durationDays = window.tourData.durationDays;
+
+  console.log('Tour data:', { tourId, tourType, seasonStart, seasonEnd, maxGroupSize, minGroupSize, durationDays });
 
   if (isNaN(seasonStart.getTime()) || isNaN(seasonEnd.getTime())) {
     console.error('Invalid season dates:', window.tourData.season);
@@ -54,19 +57,36 @@ document.addEventListener('DOMContentLoaded', () => {
       start: seasonStart,
       end: new Date(seasonEnd.getTime() + 86400000),
     },
-    events: `/tours/${tourId}/availability`,
+    events: async function(fetchInfo, successCallback, failureCallback) {
+      try {
+        const response = await fetch(`/tours/${tourId}/availability`);
+        const events = await response.json();
+        console.log('Availability events:', events);
+        const filteredEvents = events.filter(event => event.availableSlots >= minGroupSize);
+        console.log('Filtered events for calendar:', filteredEvents);
+        successCallback(filteredEvents);
+      } catch (error) {
+        console.error('Error fetching availability for calendar:', error);
+        bookingError.textContent = 'Ошибка загрузки доступных дат';
+        bookingError.classList.remove('hidden');
+        failureCallback(error);
+      }
+    },
+    eventDidMount: function(info) {
+      tippy(info.el, {
+        content: info.event.extendedProps.availableSlots >= minGroupSize
+          ? `Осталось мест: ${info.event.extendedProps.availableSlots}`
+          : 'Нет доступных мест',
+        placement: 'top',
+        theme: 'light',
+      });
+    },
     eventClick: function(info) {
-      if (info.event.extendedProps.availableSlots >= 1) {
-        if (['active', 'camping', 'excursion'].includes(tourType)) {
-          const select = tourDateInput;
-          const option = select.querySelector(`option[value="${info.event.startStr}"]`);
-          if (option) {
-            select.value = info.event.startStr;
-          }
-        } else {
-          tourDateInput.value = info.event.startStr;
-        }
-        participantsInput.max = Math.min(info.event.extendedProps.availableSlots, maxGroupSize);
+      if (info.event.extendedProps.availableSlots >= minGroupSize) {
+        tourDateInput.value = info.event.startStr;
+        participantsInput.max = info.event.extendedProps.availableSlots;
+        bookingError.classList.add('hidden');
+        console.log('Selected date from calendar:', info.event.startStr, 'Available slots:', info.event.extendedProps.availableSlots);
       }
     }
   });
@@ -77,18 +97,75 @@ document.addEventListener('DOMContentLoaded', () => {
     fetch(`/tours/${tourId}/availability`)
       .then(response => response.json())
       .then(events => {
+        console.log('Fetched availability for select:', events);
         const select = tourDateInput;
+        select.innerHTML = '<option value="">Выберите дату</option>';
+        const availableDates = events
+          .filter(event => event.availableSlots >= minGroupSize)
+          .map(event => event.start);
+        console.log('Available dates for select:', availableDates);
+
         events.forEach(event => {
-          if (event.availableSlots >= 1) {
+          if (event.availableSlots >= minGroupSize) {
             const option = document.createElement('option');
             option.value = event.start;
             option.textContent = new Date(event.start).toLocaleDateString('ru-RU');
             select.appendChild(option);
           }
         });
+
+        // Валидация выбора даты
+        tourDateInput.addEventListener('change', () => {
+          const selectedDate = tourDateInput.value;
+          console.log('Selected date in select:', selectedDate);
+          if (selectedDate && !availableDates.includes(selectedDate)) {
+            bookingError.textContent = 'Выбранная дата недоступна';
+            bookingError.classList.remove('hidden');
+            tourDateInput.value = '';
+            participantsInput.max = '';
+          } else {
+            bookingError.classList.add('hidden');
+            const event = events.find(e => e.start === selectedDate);
+            participantsInput.max = event ? event.availableSlots : maxGroupSize;
+          }
+        });
       })
       .catch(error => {
-        console.error('Error fetching availability:', error);
+        console.error('Error fetching availability for select:', error);
+        bookingError.textContent = 'Ошибка загрузки доступных дат';
+        bookingError.classList.remove('hidden');
+      });
+  } else {
+    // Валидация дат для passive и health туров
+    fetch(`/tours/${tourId}/availability`)
+      .then(response => response.json())
+      .then(events => {
+        console.log('Fetched availability for input:', events);
+        const availableDates = events
+          .filter(event => event.availableSlots >= minGroupSize)
+          .map(event => event.start);
+        console.log('Available dates for input:', availableDates);
+
+        tourDateInput.min = seasonStart.toISOString().split('T')[0];
+        tourDateInput.max = seasonEnd.toISOString().split('T')[0];
+
+        tourDateInput.addEventListener('input', () => {
+          const selectedDate = tourDateInput.value;
+          console.log('Selected date in input:', selectedDate);
+          if (selectedDate && !availableDates.includes(selectedDate)) {
+            bookingError.textContent = 'Выбранная дата недоступна';
+            bookingError.classList.remove('hidden');
+            tourDateInput.value = '';
+            participantsInput.max = '';
+          } else {
+            bookingError.classList.add('hidden');
+            const event = events.find(e => e.start === selectedDate);
+            participantsInput.max = event ? event.availableSlots : maxGroupSize;
+          }
+        });
+      })
+      .catch(error => {
+        console.error('Error fetching availability for input:', error);
         bookingError.textContent = 'Ошибка загрузки доступных дат';
         bookingError.classList.remove('hidden');
       });
@@ -125,13 +202,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (!participants || participants < 1) {
       bookingError.textContent = 'Количество участников должно быть больше 0';
-      bookingError.classList.remove('hidden');
-      bookingSuccess.classList.add('hidden');
-      return;
-    }
-
-    if (participants > maxGroupSize) {
-      bookingError.textContent = `Количество участников не может превышать ${maxGroupSize}`;
       bookingError.classList.remove('hidden');
       bookingSuccess.classList.add('hidden');
       return;
@@ -186,7 +256,7 @@ document.addEventListener('DOMContentLoaded', () => {
           .then(response => response.json())
           .then(events => {
             events.forEach(event => {
-              if (event.availableSlots >= 1) {
+              if (event.availableSlots >= minGroupSize) {
                 const option = document.createElement('option');
                 option.value = event.start;
                 option.textContent = new Date(event.start).toLocaleDateString('ru-RU');
