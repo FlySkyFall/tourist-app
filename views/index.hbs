@@ -19,40 +19,40 @@
   </section>
 
   <section class="py-12 bg-white">
-    <div class="container mx-auto px-4">
-      <h2 class="text-3xl font-bold text-center mb-8">Популярные туры</h2>
-      <div class="flex justify-center mb-6">
-        <button class="filter-btn px-4 py-2 mx-1 rounded {{eq currentType 'all' 'bg-blue-600 text-white' 'bg-gray-200 text-gray-800'}}" data-category="all">Все</button>
-        <button class="filter-btn px-4 py-2 mx-1 rounded {{eq currentType 'active' 'bg-blue-600 text-white' 'bg-gray-200 text-gray-800'}}" data-category="active">Активный</button>
-        <button class="filter-btn px-4 py-2 mx-1 rounded {{eq currentType 'excursion' 'bg-blue-600 text-white' 'bg-gray-200 text-gray-800'}}" data-category="excursion">Экскурсионный</button>
-        <button class="filter-btn px-4 py-2 mx-1 rounded {{eq currentType 'camping' 'bg-blue-600 text-white' 'bg-gray-200 text-gray-800'}}" data-category="camping">Кемпинг</button>
-        <button class="filter-btn px-4 py-2 mx-1 rounded {{eq currentType 'health' 'bg-blue-600 text-white' 'bg-gray-200 text-gray-800'}}" data-category="health">Оздоровительный</button>
-        <button class="filter-btn px-4 py-2 mx-1 rounded {{eq currentType 'passive' 'bg-blue-600 text-white' 'bg-gray-200 text-gray-800'}}" data-category="passive">Пассивный</button>
-      </div>
-      <div class="relative">
-        <div id="tour-carousel" class="flex overflow-x-auto">
-          {{#each featuredTours}}
-            <div class="tour-card flex-none w-80 mx-2" data-category="{{this.type}}">
-              <div class="bg-gray-100 rounded-lg shadow-md overflow-hidden">
-                <img src="{{this.images.[0]}}" alt="{{this.title}}" class="w-full h-48 object-cover">
-                <div class="p-4">
-                  <h3 class="text-xl font-semibold mb-2">{{this.title}}</h3>
-                  <p class="text-gray-600 mb-2">{{this.description}}</p>
-                  <p class="text-blue-600 font-bold mb-4">{{this.price}} ₽</p>
-                  <a href="/tours/{{this._id}}" class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded">Подробнее</a>
-                </div>
+  <div class="container mx-auto px-4">
+    <h2 class="text-3xl font-bold text-center mb-8">Популярные туры</h2>
+    <div class="flex justify-center mb-6">
+      <button class="filter-btn px-4 py-2 mx-1 rounded {{eq currentType 'all' 'bg-blue-600 text-white' 'bg-gray-200 text-gray-800'}}" data-category="all">Все</button>
+      <button class="filter-btn px-4 py-2 mx-1 rounded {{eq currentType 'active' 'bg-blue-600 text-white' 'bg-gray-200 text-gray-800'}}" data-category="active">Активный</button>
+      <button class="filter-btn px-4 py-2 mx-1 rounded {{eq currentType 'excursion' 'bg-blue-600 text-white' 'bg-gray-200 text-gray-800'}}" data-category="excursion">Экскурсионный</button>
+      <button class="filter-btn px-4 py-2 mx-1 rounded {{eq currentType 'camping' 'bg-blue-600 text-white' 'bg-gray-200 text-gray-800'}}" data-category="camping">Кемпинг</button>
+      <button class="filter-btn px-4 py-2 mx-1 rounded {{eq currentType 'health' 'bg-blue-600 text-white' 'bg-gray-200 text-gray-800'}}" data-category="health">Оздоровительный</button>
+      <button class="filter-btn px-4 py-2 mx-1 rounded {{eq currentType 'passive' 'bg-blue-600 text-white' 'bg-gray-200 text-gray-800'}}" data-category="passive">Пассивный</button>
+    </div>
+    <div class="relative">
+      <div id="tour-carousel" class="flex">
+        {{#each featuredTours}}
+          <div class="tour-card flex-none w-80 mx-2" data-category="{{this.type}}">
+            <div class="bg-gray-100 rounded-lg shadow-md overflow-hidden">
+              <img src="{{this.images.[0]}}" alt="{{this.title}}" class="w-full h-48 object-cover" onerror="this.src='/img/placeholder.jpg'">
+              <div class="p-4">
+                <h3 class="text-xl font-semibold mb-2">{{this.title}}</h3>
+                <p class="text-gray-600 mb-2">{{this.description}}</p>
+                <p class="text-blue-600 font-bold mb-4">{{this.price}} ₽</p>
+                <a href="/tours/{{this._id}}" class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded">Подробнее</a>
               </div>
             </div>
-          {{else}}
-            <p class="text-center text-gray-600">Нет доступных туров</p>
-          {{/each}}
-        </div>
-        <button id="carousel-prev" class="carousel-btn absolute left-0 top-1/2 transform -translate-y-1/2 bg-gray-800 text-white p-2 rounded">◄</button>
-        <button id="carousel-next" class="carousel-btn absolute right-0 top-1/2 transform -translate-y-1/2 bg-gray-800 text-white p-2 rounded">►</button>
+          </div>
+        {{else}}
+          <p class="text-center text-gray-600">Нет доступных туров</p>
+        {{/each}}
       </div>
-      <div id="tour-error" class="text-center text-red-600 mt-4 hidden"></div>
+      <button id="carousel-prev" class="carousel-btn absolute left-0 top-1/2 transform -translate-y-1/2 bg-gray-800 text-white p-2 rounded">◄</button>
+      <button id="carousel-next" class="carousel-btn absolute right-0 top-1/2 transform -translate-y-1/2 bg-gray-800 text-white p-2 rounded">►</button>
     </div>
-  </section>
+    <div id="tour-error" class="text-center text-red-600 mt-4 hidden"></div>
+  </div>
+</section>
 
   <section class="py-12 bg-gray-100">
     <div class="container mx-auto px-4">

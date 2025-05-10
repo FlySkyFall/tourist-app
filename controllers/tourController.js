@@ -60,10 +60,13 @@ exports.getTours = async (req, res) => {
       query.type = type;
     }
     if (search) {
+      // Экранирование специальных символов в search для $regex
+      const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       query.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } },
+        { title: { $regex: escapedSearch, $options: 'i' } },
+        { description: { $regex: escapedSearch, $options: 'i' } },
       ];
+      console.log('Search query applied:', { search, escapedSearch, $or: query.$or });
     }
     if (region) {
       query['location.region'] = region;
@@ -115,28 +118,23 @@ exports.getTours = async (req, res) => {
 
     console.log('getTours result:', { tours: tours.length, totalTours, totalPages, page, type, search, region, minPrice, maxPrice, startDate: startDate ? startDate.toISOString() : '', endDate: endDate ? endDate.toISOString() : '', sortBy, minDuration, maxDuration, amenities });
 
-    if (!tours.length && page > 1) {
-      console.log(`No tours found for page ${page}, skip=${skip}, limit=${limit}, type=${type}, search=${search}, region=${region}, minPrice=${minPrice}, maxPrice=${maxPrice}, startDate=${startDate}, endDate=${endDate}, sortBy=${sortBy}, minDuration=${minDuration}, maxDuration=${maxDuration}, amenities=${amenities}`);
-      return res.render('tours/index', {
-        tours: [],
-        regions,
-        amenitiesList,
-        currentPage: page,
-        totalPages,
-        totalTours,
-        error: 'Такой страницы не существует',
-        currentType: type,
-        currentSearch: search,
-        currentRegion: region,
-        currentMinPrice: minPrice,
-        currentMaxPrice: maxPrice,
-        currentStartDate: startDate ? startDate.toISOString().split('T')[0] : '',
-        currentEndDate: endDate ? endDate.toISOString().split('T')[0] : '',
-        currentSortBy: sortBy,
-        currentMinDuration: minDuration,
-        currentMaxDuration: maxDuration,
-        currentAmenities: amenities.join(','),
-      });
+    // Перенаправление на последнюю страницу, если page > totalPages
+    if (page > totalPages && totalPages > 0) {
+      console.log(`Page ${page} exceeds totalPages ${totalPages}, redirecting to last page`);
+      const redirectParams = new URLSearchParams();
+      redirectParams.append('page', totalPages);
+      if (type && type !== 'all') redirectParams.append('type', type);
+      if (search) redirectParams.append('search', search);
+      if (region) redirectParams.append('region', region);
+      if (minPrice) redirectParams.append('minPrice', minPrice);
+      if (maxPrice) redirectParams.append('maxPrice', maxPrice);
+      if (startDate) redirectParams.append('startDate', startDate.toISOString().split('T')[0]);
+      if (endDate) redirectParams.append('endDate', endDate.toISOString().split('T')[0]);
+      if (sortBy) redirectParams.append('sortBy', sortBy);
+      if (minDuration) redirectParams.append('minDuration', minDuration);
+      if (maxDuration) redirectParams.append('maxDuration', maxDuration);
+      if (amenities.length > 0) redirectParams.append('amenities', amenities.join(','));
+      return res.redirect(`/tours?${redirectParams.toString()}`);
     }
 
     res.render('tours/index', {
@@ -185,11 +183,14 @@ exports.getTours = async (req, res) => {
   }
 };
 
+// Остальные методы остаются без изменений
 exports.filterTours = async (req, res) => {
   try {
-    const type = req.query.type || 'all';
     const page = parseInt(req.query.page) || 1;
-    const search = req.query.search ? req.query.search.trim() : '';
+    const limit = 12;
+    const skip = (page - 1) * limit;
+    const type = req.query.type || 'all';
+    let search = req.query.search ? decodeURIComponent(req.query.search).trim() : '';
     const region = req.query.region ? req.query.region.trim() : '';
     const minPrice = req.query.minPrice ? parseInt(req.query.minPrice) : '';
     const maxPrice = req.query.maxPrice ? parseInt(req.query.maxPrice) : '';
@@ -198,10 +199,7 @@ exports.filterTours = async (req, res) => {
     const sortBy = req.query.sortBy || '';
     const minDuration = req.query.minDuration ? parseInt(req.query.minDuration) : '';
     const maxDuration = req.query.maxDuration ? parseInt(req.query.maxDuration) : '';
-    const limit = 12;
-    const skip = (page - 1) * limit;
 
-    // Handle amenities
     let amenities = [];
     console.log('Raw amenities query in filterTours:', req.query.amenities);
     if (req.query.amenities) {
@@ -218,10 +216,12 @@ exports.filterTours = async (req, res) => {
       query.type = type;
     }
     if (search) {
+      const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       query.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } },
+        { title: { $regex: escapedSearch, $options: 'i' } },
+        { description: { $regex: escapedSearch, $options: 'i' } },
       ];
+      console.log('Search query applied:', { search, escapedSearch, $or: query.$or });
     }
     if (region) {
       query['location.region'] = region;

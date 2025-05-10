@@ -1,15 +1,24 @@
 /* Кастомные стили для главной страницы и других страниц */
 #tour-carousel {
-    position: relative;
-    overflow: hidden;
-    display: flex;
-    transition: transform 0.5s ease-in-out;
-  }
-  
-  .tour-card {
-    flex: 0 0 33.333%;
-    transition: transform 0.3s ease, opacity 0.3s ease;
-  }
+  display: flex;
+  transition: transform 0.3s ease-in-out;
+  width: 100%;
+  overflow: hidden;
+  touch-action: none; /* Запрещаем сенсорную прокрутку */
+  -webkit-overflow-scrolling: none; /* Отключаем инерционную прокрутку на iOS */
+  user-select: none; /* Запрещаем выделение текста */
+}
+
+.tour-card {
+  flex: none;
+  width: 320px;
+  margin: 0 8px;
+}
+
+.carousel-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
   
   .tour-card:hover {
     transform: scale(1.05);

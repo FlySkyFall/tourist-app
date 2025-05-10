@@ -15,26 +15,26 @@
     <div class="container mx-auto px-4">
       <h1 class="text-3xl font-bold mb-6">Туры по Краснодарскому краю</h1>
 
-      <form id="tour-filter-form" class="mb-8 bg-gray-100 p-6 rounded-lg">
+      <form id="tour-filter-form" class="mb-8 bg-gray-100 p-6 rounded-lg" onsubmit="return false">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label for="type" class="block text-gray-700 mb-2">Тип тура:</label>
-            <select id="type" name="type" class="w-full border rounded-lg px-4 py-2">
-              <option value="all" {{#if (eq currentType 'all')}}selected{{/if}}>Все</option>
-              <option value="active" {{#if (eq currentType 'active')}}selected{{/if}}>Активный</option>
-              <option value="excursion" {{#if (eq currentType 'excursion')}}selected{{/if}}>Экскурсионный</option>
-              <option value="camping" {{#if (eq currentType 'camping')}}selected{{/if}}>Кемпинг</option>
-              <option value="health" {{#if (eq currentType 'health')}}selected{{/if}}>Оздоровительный</option>
-              <option value="passive" {{#if (eq currentType 'passive')}}selected{{/if}}>Пассивный</option>
-            </select>
+            <div class="flex flex-wrap gap-2">
+              <button type="button" class="filter-btn px-4 py-2 rounded {{#if (eq currentType 'all')}}bg-blue-600 text-white{{else}}bg-gray-200 text-gray-800{{/if}}" data-type="all">Все</button>
+              <button type="button" class="filter-btn px-4 py-2 rounded {{#if (eq currentType 'active')}}bg-blue-600 text-white{{else}}bg-gray-200 text-gray-800{{/if}}" data-type="active">Активный</button>
+              <button type="button" class="filter-btn px-4 py-2 rounded {{#if (eq currentType 'excursion')}}bg-blue-600 text-white{{else}}bg-gray-200 text-gray-800{{/if}}" data-type="excursion">Экскурсионный</button>
+              <button type="button" class="filter-btn px-4 py-2 rounded {{#if (eq currentType 'camping')}}bg-blue-600 text-white{{else}}bg-gray-200 text-gray-800{{/if}}" data-type="camping">Кемпинг</button>
+              <button type="button" class="filter-btn px-4 py-2 rounded {{#if (eq currentType 'health')}}bg-blue-600 text-white{{else}}bg-gray-200 text-gray-800{{/if}}" data-type="health">Оздоровительный</button>
+              <button type="button" class="filter-btn px-4 py-2 rounded {{#if (eq currentType 'passive')}}bg-blue-600 text-white{{else}}bg-gray-200 text-gray-800{{/if}}" data-type="passive">Пассивный</button>
+            </div>
           </div>
           <div>
-            <label for="search" class="block text-gray-700 mb-2">Поиск:</label>
-            <input type="text" id="search" name="search" value="{{currentSearch}}" class="w-full border rounded-lg px-4 py-2" placeholder="Название или описание">
+            <label for="tour-search" class="block text-gray-700 mb-2">Поиск:</label>
+            <input type="text" id="tour-search" name="search" value="{{currentSearch}}" class="w-full border rounded-lg px-4 py-2" placeholder="Название или описание">
           </div>
           <div>
-            <label for="region" class="block text-gray-700 mb-2">Регион:</label>
-            <select id="region" name="region" class="w-full border rounded-lg px-4 py-2">
+            <label for="region-filter" class="block text-gray-700 mb-2">Регион:</label>
+            <select id="region-filter" name="region" class="w-full border rounded-lg px-4 py-2">
               <option value="" {{#unless currentRegion}}selected{{/unless}}>Все регионы</option>
               {{#each regions}}
                 <option value="{{this.name}}" {{#if (eq ../currentRegion this.name)}}selected{{/if}}>{{this.name}}</option>
@@ -42,24 +42,24 @@
             </select>
           </div>
           <div>
-            <label for="minPrice" class="block text-gray-700 mb-2">Минимальная цена:</label>
-            <input type="number" id="minPrice" name="minPrice" value="{{currentMinPrice}}" class="w-full border rounded-lg px-4 py-2" placeholder="₽">
+            <label for="min-price" class="block text-gray-700 mb-2">Минимальная цена:</label>
+            <input type="number" id="min-price" name="minPrice" value="{{currentMinPrice}}" class="w-full border rounded-lg px-4 py-2" placeholder="₽">
           </div>
           <div>
-            <label for="maxPrice" class="block text-gray-700 mb-2">Максимальная цена:</label>
-            <input type="number" id="maxPrice" name="maxPrice" value="{{currentMaxPrice}}" class="w-full border rounded-lg px-4 py-2" placeholder="₽">
+            <label for="max-price" class="block text-gray-700 mb-2">Максимальная цена:</label>
+            <input type="number" id="max-price" name="maxPrice" value="{{currentMaxPrice}}" class="w-full border rounded-lg px-4 py-2" placeholder="₽">
           </div>
           <div>
-            <label for="startDate" class="block text-gray-700 mb-2">Дата начала сезона:</label>
-            <input type="date" id="startDate" name="startDate" value="{{currentStartDate}}" class="w-full border rounded-lg px-4 py-2">
+            <label for="start-date" class="block text-gray-700 mb-2">Дата начала сезона:</label>
+            <input type="date" id="start-date" name="startDate" value="{{currentStartDate}}" class="w-full border rounded-lg px-4 py-2">
           </div>
           <div>
-            <label for="endDate" class="block text-gray-700 mb-2">Дата конца сезона:</label>
-            <input type="date" id="endDate" name="endDate" value="{{currentEndDate}}" class="w-full border rounded-lg px-4 py-2">
+            <label for="end-date" class="block text-gray-700 mb-2">Дата конца сезона:</label>
+            <input type="date" id="end-date" name="endDate" value="{{currentEndDate}}" class="w-full border rounded-lg px-4 py-2">
           </div>
           <div>
-            <label for="sortBy" class="block text-gray-700 mb-2">Сортировка:</label>
-            <select id="sortBy" name="sortBy" class="w-full border rounded-lg px-4 py-2">
+            <label for="sort-by" class="block text-gray-700 mb-2">Сортировка:</label>
+            <select id="sort-by" name="sortBy" class="w-full border rounded-lg px-4 py-2">
               <option value="" {{#unless currentSortBy}}selected{{/unless}}>Без сортировки</option>
               <option value="price-asc" {{#if (eq currentSortBy 'price-asc')}}selected{{/if}}>Цена: по возрастанию</option>
               <option value="price-desc" {{#if (eq currentSortBy 'price-desc')}}selected{{/if}}>Цена: по убыванию</option>
@@ -67,31 +67,32 @@
             </select>
           </div>
           <div>
-            <label for="minDuration" class="block text-gray-700 mb-2">Мин. продолжительность (дни):</label>
-            <input type="number" id="minDuration" name="minDuration" value="{{currentMinDuration}}" class="w-full border rounded-lg px-4 py-2" placeholder="Дни">
+            <label for="min-duration" class="block text-gray-700 mb-2">Мин. продолжительность (дни):</label>
+            <input type="number" id="min-duration" name="minDuration" value="{{currentMinDuration}}" class="w-full border rounded-lg px-4 py-2" placeholder="Дни">
           </div>
           <div>
-            <label for="maxDuration" class="block text-gray-700 mb-2">Макс. продолжительность (дни):</label>
-            <input type="number" id="maxDuration" name="maxDuration" value="{{currentMaxDuration}}" class="w-full border rounded-lg px-4 py-2" placeholder="Дни">
+            <label for="max-duration" class="block text-gray-700 mb-2">Макс. продолжительность (дни):</label>
+            <input type="number" id="max-duration" name="maxDuration" value="{{currentMaxDuration}}" class="w-full border rounded-lg px-4 py-2" placeholder="Дни">
+          </div>
+          <div>
+            <label for="amenities-filter" class="block text-gray-700 mb-2">Удобства:</label>
+            <select id="amenities-filter" name="amenities" multiple class="w-full border rounded-lg px-4 py-2">
+              {{#each amenitiesList}}
+                <option value="{{this}}" {{#includes ../currentAmenities this}}selected{{/includes}}>{{this}}</option>
+              {{/each}}
+            </select>
+          </div>
+          <div class="flex items-end">
+            <button type="button" id="apply-amenities" class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded">Применить удобства</button>
           </div>
         </div>
-        <div class="mt-4">
-          <label class="block text-gray-700 mb-2">Удобства:</label>
-          {{#each amenitiesList}}
-            <label class="inline-flex items-center mr-4">
-              <input type="checkbox" name="amenities" value="{{this}}" {{#includes ../currentAmenities this}}checked{{/includes}} class="form-checkbox">
-              <span class="ml-2">{{this}}</span>
-            </label>
-          {{/each}}
-        </div>
-        <button type="submit" class="mt-4 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded">Фильтровать</button>
       </form>
 
       {{#if error}}
         <p class="text-red-600 mb-4">{{error}}</p>
       {{/if}}
 
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div class="tours-list grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {{#each tours}}
           <div class="bg-white rounded-lg shadow-md overflow-hidden">
             <img src="{{this.images.[0]}}" alt="{{this.title}}" class="w-full h-48 object-cover">
@@ -113,30 +114,22 @@
             </div>
           </div>
         {{else}}
-          <p class="text-gray-600">Туры не найдены.</p>
+          <p class="text-gray-600 col-span-3">Туры не найдены.</p>
         {{/each}}
       </div>
 
       {{#if totalPages}}
         <div class="mt-8 flex justify-center">
-          <nav class="inline-flex">
-            {{#if (gt currentPage 1)}}
-              <a href="/tours?page={{subtract currentPage 1}}&type={{currentType}}&search={{currentSearch}}®ion={{currentRegion}}&minPrice={{currentMinPrice}}&maxPrice={{currentMaxPrice}}&startDate={{currentStartDate}}&endDate={{currentEndDate}}&sortBy={{currentSortBy}}&minDuration={{currentMinDuration}}&maxDuration={{currentMaxDuration}}&amenities={{currentAmenities}}" class="px-3 py-2 bg-gray-200 hover:bg-gray-300 rounded-l">Предыдущая</a>
-            {{/if}}
-            {{#each (range 1 totalPages)}}
-              <a href="/tours?page={{this}}&type={{../currentType}}&search={{../currentSearch}}®ion={{../currentRegion}}&minPrice={{../currentMinPrice}}&maxPrice={{../currentMaxPrice}}&startDate={{../currentStartDate}}&endDate={{../currentEndDate}}&sortBy={{../currentSortBy}}&minDuration={{../currentMinDuration}}&maxDuration={{../currentMaxDuration}}&amenities={{../currentAmenities}}" class="px-3 py-2 {{#if (eq this ../currentPage)}}bg-blue-600 text-white{{else}}bg-gray-200 hover:bg-gray-300{{/if}}">{{this}}</a>
-            {{/each}}
-            {{#if (lt currentPage totalPages)}}
-              <a href="/tours?page={{add currentPage 1}}&type={{currentType}}&search={{currentSearch}}®ion={{currentRegion}}&minPrice={{currentMinPrice}}&maxPrice={{currentMaxPrice}}&startDate={{currentStartDate}}&endDate={{currentEndDate}}&sortBy={{currentSortBy}}&minDuration={{currentMinDuration}}&maxDuration={{currentMaxDuration}}&amenities={{currentAmenities}}" class="px-3 py-2 bg-gray-200 hover:bg-gray-300 rounded-r">Следующая</a>
-            {{/if}}
-          </nav>
+          <nav class="pagination inline-flex"></nav>
         </div>
+        <p class="mt-4 text-center text-gray-600">Страница: {{currentPage}} из {{totalPages}} (Туров на странице: {{toursOnPage}}, Всего туров: {{totalTours}})</p>
       {{/if}}
     </div>
   </section>
 
   {{> footer}}
 
-  <script src="/js/tour-filter.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"></script>
+  <script src="/js/tours.js"></script>
 </body>
 </html>

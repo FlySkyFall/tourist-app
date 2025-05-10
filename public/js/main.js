@@ -5,41 +5,121 @@ document.addEventListener('DOMContentLoaded', () => {
   const nextBtn = document.querySelector('#carousel-next');
   let totalItems = 0;
   let currentIndex = 0;
+  const cardWidth = 336; // w-80 (320px) + mx-2 (8px * 2 = 16px)
 
   const updateCarousel = () => {
     if (carousel && totalItems > 0) {
-      carousel.style.transform = `translateX(-${currentIndex * (100 / 3)}%)`;
+      // Ограничиваем currentIndex, чтобы не прокручивать за последнюю карточку
+      const maxIndex = Math.max(0, totalItems - Math.floor(carousel.parentElement.offsetWidth / cardWidth));
+      currentIndex = Math.min(Math.max(currentIndex, 0), maxIndex);
+      carousel.style.transform = `translateX(-${currentIndex * cardWidth}px)`;
+      // Обновляем состояние кнопок
+      if (prevBtn) prevBtn.disabled = currentIndex === 0;
+      if (nextBtn) nextBtn.disabled = currentIndex >= maxIndex;
     }
   };
 
   if (carousel) {
+    // Отключаем встроенную прокрутку
+    carousel.style.overflowX = 'hidden';
+
+    // Предотвращаем ручную прокрутку
+    carousel.addEventListener('scroll', (e) => {
+      e.preventDefault();
+      carousel.scrollLeft = 0; // Сбрасываем прокрутку
+    });
+
+    // Предотвращаем прокрутку колесом мыши
+    carousel.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      if (e.deltaX > 0 || e.deltaY > 0) {
+        // Прокрутка вправо
+        if (currentIndex < totalItems - Math.floor(carousel.parentElement.offsetWidth / cardWidth)) {
+          currentIndex++;
+          updateCarousel();
+        }
+      } else if (e.deltaX < 0 || e.deltaY < 0) {
+        // Прокрутка влево
+        if (currentIndex > 0) {
+          currentIndex--;
+          updateCarousel();
+        }
+      }
+    });
+
+    // Поддержка сенсорного управления
+    let touchStartX = 0;
+    let touchEndX = 0;
+
+    carousel.addEventListener('touchstart', (e) => {
+      touchStartX = e.touches[0].clientX;
+    });
+
+    carousel.addEventListener('touchmove', (e) => {
+      e.preventDefault(); // Предотвращаем прокрутку
+    });
+
+    carousel.addEventListener('touchend', (e) => {
+      touchEndX = e.changedTouches[0].clientX;
+      const swipeDistance = touchStartX - touchEndX;
+      if (swipeDistance > 50) {
+        // Свайп влево (вперёд)
+        if (currentIndex < totalItems - Math.floor(carousel.parentElement.offsetWidth / cardWidth)) {
+          currentIndex++;
+          updateCarousel();
+        }
+      } else if (swipeDistance < -50) {
+        // Свайп вправо (назад)
+        if (currentIndex > 0) {
+          currentIndex--;
+          updateCarousel();
+        }
+      }
+    });
+
     totalItems = carousel.querySelectorAll('.tour-card').length;
     updateCarousel();
 
     if (nextBtn && prevBtn) {
       nextBtn.addEventListener('click', () => {
-        currentIndex = (currentIndex + 1) % totalItems;
-        updateCarousel();
+        if (currentIndex < totalItems - 1) {
+          currentIndex++;
+          updateCarousel();
+        }
       });
 
       prevBtn.addEventListener('click', () => {
-        currentIndex = (currentIndex - 1 + totalItems) % totalItems;
-        updateCarousel();
+        if (currentIndex > 0) {
+          currentIndex--;
+          updateCarousel();
+        }
       });
     }
 
+    // Автоматическая прокрутка
     let autoSlide = setInterval(() => {
-      currentIndex = (currentIndex + 1) % totalItems;
+      if (currentIndex < totalItems - Math.floor(carousel.parentElement.offsetWidth / cardWidth)) {
+        currentIndex++;
+      } else {
+        currentIndex = 0; // Возвращаемся в начало
+      }
       updateCarousel();
     }, 5000);
 
     carousel.addEventListener('mouseenter', () => clearInterval(autoSlide));
     carousel.addEventListener('mouseleave', () => {
       autoSlide = setInterval(() => {
-        currentIndex = (currentIndex + 1) % totalItems;
+        if (currentIndex < totalItems - Math.floor(carousel.parentElement.offsetWidth / cardWidth)) {
+          currentIndex++;
+        } else {
+          currentIndex = 0;
+        }
         updateCarousel();
       }, 5000);
     });
+
+    // Обновление карусели при изменении размера окна
+    window.addEventListener('resize', updateCarousel);
   }
 
   // Фильтрация туров на главной странице (index.hbs)
@@ -50,15 +130,19 @@ document.addEventListener('DOMContentLoaded', () => {
       e.preventDefault();
       const category = button.dataset.category;
 
-      filterButtons.forEach(btn => btn.classList.remove('active'));
-      button.classList.add('active');
+      filterButtons.forEach(btn => {
+        btn.classList.remove('bg-blue-600', 'text-white');
+        btn.classList.add('bg-gray-200', 'text-gray-800');
+      });
+      button.classList.remove('bg-gray-200', 'text-gray-800');
+      button.classList.add('bg-blue-600', 'text-white');
 
       if (tourCarousel) {
         tourCarousel.classList.add('loading');
         tourCarousel.innerHTML = '<p class="text-center text-gray-600">Загрузка...</p>';
 
         try {
-          const response = await fetch(`/filter-tours?type=${category === 'all' ? '' : category}`);
+          const response = await fetch(`/filter-tours?type=${category === 'all' ? '' : encodeURIComponent(category)}`);
           if (!response.ok) {
             throw new Error(`HTTP ошибка: ${response.status}`);
           }
@@ -67,12 +151,12 @@ document.addEventListener('DOMContentLoaded', () => {
           if (data.tours && data.tours.length > 0) {
             tourCarousel.innerHTML = data.tours
               .map(tour => `
-                <div class="tour-card" data-category="${tour.type}">
+                <div class="tour-card flex-none w-80 mx-2" data-category="${tour.type}">
                   <div class="bg-gray-100 rounded-lg shadow-md overflow-hidden">
                     <img src="${tour.images[0] || '/img/placeholder.jpg'}" alt="${tour.title}" class="w-full h-48 object-cover">
                     <div class="p-4">
                       <h3 class="text-xl font-semibold mb-2">${tour.title}</h3>
-                      <p class="text-gray-600 mb-2">${tour.description}</p>
+                      <p class="text-gray-600 mb-2">${tour.description.substring(0, 100)}${tour.description.length > 100 ? '...' : ''}</p>
                       <p class="text-blue-600 font-bold mb-4">${tour.price} ₽</p>
                       <a href="/tours/${tour._id}" class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded">Подробнее</a>
                     </div>
@@ -96,6 +180,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   });
+
 
   // Фильтрация туров на странице региона (regions/:id)
   const regionFilterButtons = document.querySelectorAll('.region-filter-btn');
