@@ -35,33 +35,87 @@ exports.getNewTour = (req, res) => {
 
 exports.createTour = async (req, res) => {
   try {
-    const { title, description, maxGroupSize, season } = req.body;
+    const {
+      title,
+      description,
+      type,
+      durationDays,
+      price,
+      'location.region': locationRegion,
+      'location.coordinates.lat': locationLat,
+      'location.coordinates.lng': locationLng,
+      'accommodation.name': accommodationName,
+      'accommodation.type': accommodationType,
+      minGroupSize,
+      maxGroupSize,
+      'season.start': seasonStart,
+      'season.end': seasonEnd,
+    } = req.body;
+
+    console.log('Creating tour with data:', {
+      title,
+      description,
+      type,
+      durationDays,
+      price,
+      location: { region: locationRegion, coordinates: { lat: locationLat, lng: locationLng } },
+      accommodation: { name: accommodationName, type: accommodationType },
+      minGroupSize,
+      maxGroupSize,
+      season: { start: seasonStart, end: seasonEnd },
+    }); // Отладка
+
     const tour = new Tour({
       title,
       description,
+      type,
+      durationDays,
+      price,
+      location: {
+        region: locationRegion,
+        coordinates: {
+          lat: parseFloat(locationLat),
+          lng: parseFloat(locationLng),
+        },
+      },
+      accommodation: {
+        name: accommodationName,
+        type: accommodationType,
+      },
+      minGroupSize,
       maxGroupSize,
       season: {
-        start: new Date(season.start),
-        end: new Date(season.end),
+        start: new Date(seasonStart),
+        end: new Date(seasonEnd),
       },
     });
+
     await tour.save();
     req.flash('success', 'Тур успешно создан');
     res.redirect('/admin/tours');
   } catch (error) {
     console.error('Error in createTour:', error.message, error.stack);
-    req.flash('error', 'Ошибка создания тура');
+    req.flash('error', `Ошибка создания тура: ${error.message}`);
     res.redirect('/admin/tours/new');
   }
 };
 
 exports.getEditTour = async (req, res) => {
   try {
-    const tour = await Tour.findById(req.params.id).lean();
+    const tourId = req.params.id;
+    console.log('Fetching tour with ID:', tourId); // Отладка
+    if (!mongoose.Types.ObjectId.isValid(tourId)) {
+      console.log('Invalid tour ID:', tourId);
+      req.flash('error', 'Неверный идентификатор тура');
+      return res.redirect('/admin/tours');
+    }
+    const tour = await Tour.findById(tourId).lean();
     if (!tour) {
+      console.log('Tour not found for ID:', tourId);
       req.flash('error', 'Тур не найден');
       return res.redirect('/admin/tours');
     }
+    console.log('Tour found:', tour); // Отладка
     res.render('admin/tour-form', {
       tour,
       user: req.user,
@@ -76,32 +130,80 @@ exports.getEditTour = async (req, res) => {
 
 exports.updateTour = async (req, res) => {
   try {
-    const { title, description, maxGroupSize, season } = req.body;
+    const {
+      title,
+      description,
+      type,
+      durationDays,
+      price,
+      'location.region': locationRegion,
+      'location.coordinates.lat': locationLat,
+      'location.coordinates.lng': locationLng,
+      'accommodation.name': accommodationName,
+      'accommodation.type': accommodationType,
+      minGroupSize,
+      maxGroupSize,
+      'season.start': seasonStart,
+      'season.end': seasonEnd,
+    } = req.body;
+
+    console.log('Updating tour with data:', {
+      title,
+      description,
+      type,
+      durationDays,
+      price,
+      location: { region: locationRegion, coordinates: { lat: locationLat, lng: locationLng } },
+      accommodation: { name: accommodationName, type: accommodationType },
+      minGroupSize,
+      maxGroupSize,
+      season: { start: seasonStart, end: seasonEnd },
+    }); // Отладка
+
     const tour = await Tour.findById(req.params.id);
     if (!tour) {
       req.flash('error', 'Тур не найден');
       return res.redirect('/admin/tours');
     }
+
     tour.title = title;
     tour.description = description;
+    tour.type = type;
+    tour.durationDays = durationDays;
+    tour.price = price;
+    tour.location = {
+      region: locationRegion,
+      coordinates: {
+        lat: parseFloat(locationLat),
+        lng: parseFloat(locationLng),
+      },
+    };
+    tour.accommodation = {
+      name: accommodationName,
+      type: accommodationType,
+    };
+    tour.minGroupSize = minGroupSize;
     tour.maxGroupSize = maxGroupSize;
     tour.season = {
-      start: new Date(season.start),
-      end: new Date(season.end),
+      start: new Date(seasonStart),
+      end: new Date(seasonEnd),
     };
+
     await tour.save();
     req.flash('success', 'Тур успешно обновлён');
     res.redirect('/admin/tours');
   } catch (error) {
     console.error('Error in updateTour:', error.message, error.stack);
-    req.flash('error', 'Ошибка обновления тура');
+    req.flash('error', `Ошибка обновления тура: ${error.message}`);
     res.redirect(`/admin/tours/${req.params.id}/edit`);
   }
 };
 
 exports.deleteTour = async (req, res) => {
   try {
-    const tour = await Tour.findById(req.params.id);
+    const tourId = req.params.id;
+    console.log('Deleting tour with ID:', tourId); // Отладка
+    const tour = await Tour.findById(tourId);
     if (!tour) {
       req.flash('error', 'Тур не найден');
       return res.redirect('/admin/tours');

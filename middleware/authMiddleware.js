@@ -1,6 +1,7 @@
 module.exports = (req, res, next) => {
     if (!req.user) {
-      return res.status(401).json({ error: 'Требуется авторизация' });
+      req.flash('error', 'Требуется авторизация');
+      return res.redirect('/auth/login');
     }
     next();
   };

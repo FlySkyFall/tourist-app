@@ -11,6 +11,7 @@ router.get('/', authMiddleware, adminMiddleware, adminController.getAdminDashboa
 // Управление турами
 router.get('/tours', authMiddleware, adminMiddleware, adminController.getTours);
 router.get('/tours/new', authMiddleware, adminMiddleware, adminController.getNewTour);
+router.get('/tours/:id/edit', authMiddleware, adminMiddleware, adminController.getEditTour);
 router.post(
   '/tours',
   authMiddleware,
@@ -18,6 +19,15 @@ router.post(
   [
     body('title').notEmpty().withMessage('Название тура обязательно'),
     body('description').notEmpty().withMessage('Описание тура обязательно'),
+    body('type').isIn(['active', 'passive', 'camping', 'excursion', 'health']).withMessage('Недопустимый тип тура'),
+    body('durationDays').isInt({ min: 1 }).withMessage('Длительность должна быть больше 0'),
+    body('price').isFloat({ min: 0 }).withMessage('Цена должна быть больше или равна 0'),
+    body('location.region').notEmpty().withMessage('Регион обязателен'),
+    body('location.coordinates.lat').isFloat().withMessage('Некорректная широта'),
+    body('location.coordinates.lng').isFloat().withMessage('Некорректная долгота'),
+    body('accommodation.name').notEmpty().withMessage('Название жилья обязательно'),
+    body('accommodation.type').isIn(['hotel', 'sanatorium', 'camping', 'retreat', 'none']).withMessage('Недопустимый тип жилья'),
+    body('minGroupSize').isInt({ min: 1 }).withMessage('Минимальное количество участников должно быть больше 0'),
     body('maxGroupSize').isInt({ min: 1 }).withMessage('Максимальное количество участников должно быть больше 0'),
     body('season.start').isISO8601().withMessage('Некорректная дата начала сезона'),
     body('season.end').isISO8601().withMessage('Некорректная дата окончания сезона'),
@@ -25,14 +35,15 @@ router.post(
   (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      req.flash('error', errors.array()[0].msg);
+      console.log('Validation errors:', errors.array()); // Отладка
+      req.flash('error', errors.array().map(err => err.msg).join(', '));
       return res.redirect('/admin/tours/new');
     }
     next();
   },
   adminController.createTour
 );
-router.get('/tours/:id/edit', authMiddleware, adminMiddleware, adminController.getEditTour);
+
 router.post(
   '/tours/:id',
   authMiddleware,
@@ -40,6 +51,15 @@ router.post(
   [
     body('title').notEmpty().withMessage('Название тура обязательно'),
     body('description').notEmpty().withMessage('Описание тура обязательно'),
+    body('type').isIn(['active', 'passive', 'camping', 'excursion', 'health']).withMessage('Недопустимый тип тура'),
+    body('durationDays').isInt({ min: 1 }).withMessage('Длительность должна быть больше 0'),
+    body('price').isFloat({ min: 0 }).withMessage('Цена должна быть больше или равна 0'),
+    body('location.region').notEmpty().withMessage('Регион обязателен'),
+    body('location.coordinates.lat').isFloat().withMessage('Некорректная широта'),
+    body('location.coordinates.lng').isFloat().withMessage('Некорректная долгота'),
+    body('accommodation.name').notEmpty().withMessage('Название жилья обязательно'),
+    body('accommodation.type').isIn(['hotel', 'sanatorium', 'camping', 'retreat', 'none']).withMessage('Недопустимый тип жилья'),
+    body('minGroupSize').isInt({ min: 1 }).withMessage('Минимальное количество участников должно быть больше 0'),
     body('maxGroupSize').isInt({ min: 1 }).withMessage('Максимальное количество участников должно быть больше 0'),
     body('season.start').isISO8601().withMessage('Некорректная дата начала сезона'),
     body('season.end').isISO8601().withMessage('Некорректная дата окончания сезона'),
@@ -47,7 +67,8 @@ router.post(
   (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      req.flash('error', errors.array()[0].msg);
+      console.log('Validation errors:', errors.array()); // Отладка
+      req.flash('error', errors.array().map(err => err.msg).join(', '));
       return res.redirect(`/admin/tours/${req.params.id}/edit`);
     }
     next();

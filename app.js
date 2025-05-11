@@ -96,13 +96,19 @@ app.use(session({
   secret: process.env.SESSION_SECRET || 'secret',
   resave: false,
   saveUninitialized: false,
+  cookie: {
+    maxAge: 24*60*60*1000,
+  },
 }));
 app.use(passport.initialize());
 app.use(passport.session());
 app.use(flash());
 
 // Инициализация CSRF-защиты
-const csrfProtection = csrf();
+const csrfProtection = csrf({
+  coockie: true,
+  ignoreMethods: ['GET', 'HEAD', 'OPTIONS'],
+});
 app.use((req, res, next) => {
   if (['/auth/login', '/auth/register', '/bookings/clean-expired'].includes(req.path) && req.method === 'POST') {
     console.log(`Bypassing CSRF protection for ${req.path}`);
