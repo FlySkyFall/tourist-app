@@ -138,6 +138,8 @@ app.use('/regions', require('./routes/regionRoutes'));
 app.use('/bookings', require('./routes/bookingRoutes'));
 app.use('/profile', require('./routes/profileRoutes'));
 app.use('/admin', require('./routes/adminRoutes'));
+app.use('/news', require('./routes/newsRoutes'));
+app.use('/travel', require('./routes/travelRoutes'));
 
 // Обработка ошибок
 app.use((err, req, res, next) => {

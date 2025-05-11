@@ -190,3 +190,21 @@
   width: 100%;
   max-width: 300px;
 }
+.news-card {
+  transition: transform 0.3s ease-in-out;
+}
+
+.news-card:hover {
+  transform: translateY(-5px);
+}
+
+#news-grid {
+  min-height: 400px;
+}
+.place-card {
+  transition: transform 0.3s ease-in-out;
+}
+
+.place-card:hover {
+  transform: translateY(-5px);
+}
