@@ -10,6 +10,11 @@ const bookingSchema = new mongoose.Schema({
     enum: ['confirmed', 'pending', 'cancelled'], 
     default: 'pending' 
   },
+  paymentStatus: {
+    type: String,
+    enum: ['pending', 'completed', 'failed'],
+    default: 'pending'
+  },
   participants: { type: Number, required: true, min: 1 },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },

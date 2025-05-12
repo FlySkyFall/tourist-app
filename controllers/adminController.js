@@ -1,6 +1,7 @@
 const Tour = require('../models/Tour');
 const Booking = require('../models/Booking');
 const User = require('../models/User');
+const Post = require('../models/Post');
 const mongoose = require('mongoose');
 
 exports.getAdminDashboard = (req, res) => {
@@ -63,7 +64,7 @@ exports.createTour = async (req, res) => {
       minGroupSize,
       maxGroupSize,
       season: { start: seasonStart, end: seasonEnd },
-    }); // Отладка
+    });
 
     const tour = new Tour({
       title,
@@ -103,7 +104,7 @@ exports.createTour = async (req, res) => {
 exports.getEditTour = async (req, res) => {
   try {
     const tourId = req.params.id;
-    console.log('Fetching tour with ID:', tourId); // Отладка
+    console.log('Fetching tour with ID:', tourId);
     if (!mongoose.Types.ObjectId.isValid(tourId)) {
       console.log('Invalid tour ID:', tourId);
       req.flash('error', 'Неверный идентификатор тура');
@@ -115,7 +116,7 @@ exports.getEditTour = async (req, res) => {
       req.flash('error', 'Тур не найден');
       return res.redirect('/admin/tours');
     }
-    console.log('Tour found:', tour); // Отладка
+    console.log('Tour found:', tour);
     res.render('admin/tour-form', {
       tour,
       user: req.user,
@@ -158,7 +159,7 @@ exports.updateTour = async (req, res) => {
       minGroupSize,
       maxGroupSize,
       season: { start: seasonStart, end: seasonEnd },
-    }); // Отладка
+    });
 
     const tour = await Tour.findById(req.params.id);
     if (!tour) {
@@ -202,7 +203,7 @@ exports.updateTour = async (req, res) => {
 exports.deleteTour = async (req, res) => {
   try {
     const tourId = req.params.id;
-    console.log('Deleting tour with ID:', tourId); // Отладка
+    console.log('Deleting tour with ID:', tourId);
     const tour = await Tour.findById(tourId);
     if (!tour) {
       req.flash('error', 'Тур не найден');
@@ -357,5 +358,46 @@ exports.updateUserRole = async (req, res) => {
     console.error('Error in updateUserRole:', error.message, error.stack);
     req.flash('error', 'Ошибка обновления роли');
     res.redirect('/admin/users');
+  }
+};
+
+// Управление постами сообщества
+exports.getPosts = async (req, res) => {
+  try {
+    const posts = await Post.find()
+      .populate('author', 'username')
+      .lean();
+    res.render('admin/posts', {
+      posts,
+      user: req.user,
+      message: req.flash('success') || req.flash('error'),
+    });
+  } catch (error) {
+    console.error('Error in getPosts:', error.message, error.stack);
+    req.flash('error', 'Ошибка загрузки постов');
+    res.redirect('/admin');
+  }
+};
+
+exports.togglePostVisibility = async (req, res) => {
+  try {
+    const postId = req.params.id;
+    if (!mongoose.Types.ObjectId.isValid(postId)) {
+      req.flash('error', 'Неверный идентификатор поста');
+      return res.redirect('/admin/posts');
+    }
+    const post = await Post.findById(postId);
+    if (!post) {
+      req.flash('error', 'Пост не найден');
+      return res.redirect('/admin/posts');
+    }
+    post.isHidden = !post.isHidden;
+    await post.save();
+    req.flash('success', `Пост ${post.isHidden ? 'скрыт' : 'восстановлен'}`);
+    res.redirect('/admin/posts');
+  } catch (error) {
+    console.error('Error in togglePostVisibility:', error.message, error.stack);
+    req.flash('error', 'Ошибка изменения видимости поста');
+    res.redirect('/admin/posts');
   }
 };

@@ -3,6 +3,7 @@ const Region = require('../models/Region');
 const Booking = require('../models/Booking');
 const mongoose = require('mongoose');
 
+
 exports.getTours = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -10,7 +11,8 @@ exports.getTours = async (req, res) => {
     const skip = (page - 1) * limit;
     const type = req.query.type || 'all';
     const search = req.query.search ? req.query.search.trim() : '';
-    const region = req.query.region ? req.query.region.trim() : '';
+    // Декодируем параметр region
+    const region = req.query.region ? decodeURIComponent(req.query.region).trim() : '';
     const minPrice = req.query.minPrice ? parseInt(req.query.minPrice) : '';
     const maxPrice = req.query.maxPrice ? parseInt(req.query.maxPrice) : '';
     const startDate = req.query.startDate ? new Date(req.query.startDate) : '';
@@ -19,9 +21,21 @@ exports.getTours = async (req, res) => {
     const minDuration = req.query.minDuration ? parseInt(req.query.minDuration) : '';
     const maxDuration = req.query.maxDuration ? parseInt(req.query.maxDuration) : '';
 
-    // Handle amenities
+    console.log('Tour filter params:', {
+      page,
+      type,
+      search,
+      region,
+      minPrice,
+      maxPrice,
+      startDate,
+      endDate,
+      sortBy,
+      minDuration,
+      maxDuration,
+    });
+
     let amenities = [];
-    console.log('Raw amenities query in getTours:', req.query.amenities);
     if (req.query.amenities) {
       if (Array.isArray(req.query.amenities)) {
         amenities = req.query.amenities.map(item => item.trim());
@@ -29,47 +43,45 @@ exports.getTours = async (req, res) => {
         amenities = req.query.amenities.split(',').map(item => item.trim());
       }
     }
-    console.log('Processed amenities in getTours:', amenities);
-
-    if (page < 1) {
-      console.log('Invalid page number:', page);
-      return res.render('tours/index', {
-        tours: [],
-        regions: [],
-        amenitiesList: [],
-        currentPage: 1,
-        totalPages: 1,
-        totalTours: 0,
-        error: 'Неверный номер страницы',
-        currentType: type,
-        currentSearch: search,
-        currentRegion: region,
-        currentMinPrice: minPrice,
-        currentMaxPrice: maxPrice,
-        currentStartDate: startDate ? startDate.toISOString().split('T')[0] : '',
-        currentEndDate: endDate ? endDate.toISOString().split('T')[0] : '',
-        currentSortBy: sortBy,
-        currentMinDuration: minDuration,
-        currentMaxDuration: maxDuration,
-        currentAmenities: amenities.join(','),
-      });
-    }
 
     const query = {};
     if (type && type !== 'all') {
       query.type = type;
     }
     if (search) {
-      // Экранирование специальных символов в search для $regex
       const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       query.$or = [
         { title: { $regex: escapedSearch, $options: 'i' } },
         { description: { $regex: escapedSearch, $options: 'i' } },
       ];
-      console.log('Search query applied:', { search, escapedSearch, $or: query.$or });
     }
     if (region) {
-      query['location.region'] = region;
+      // Проверяем существование региона
+      const regionExists = await Region.findOne({ name: region }).lean();
+      if (!regionExists) {
+        console.log(`Region "${region}" not found in Region collection`);
+        return res.render('tours/index', {
+          tours: [],
+          regions: await Region.find({}).select('name').lean(),
+          amenitiesList: await Tour.distinct('accommodation.amenities'),
+          currentPage: 1,
+          totalPages: 1,
+          totalTours: 0,
+          error: `Регион "${region}" не найден`,
+          currentType: type,
+          currentSearch: search,
+          currentRegion: region,
+          currentMinPrice: minPrice,
+          currentMaxPrice: maxPrice,
+          currentStartDate: startDate ? startDate.toISOString().split('T')[0] : '',
+          currentEndDate: endDate ? endDate.toISOString().split('T')[0] : '',
+          currentSortBy: sortBy,
+          currentMinDuration: minDuration,
+          currentMaxDuration: maxDuration,
+          currentAmenities: amenities.join(','),
+        });
+      }
+      query['location.region'] = { $regex: `^${region}$`, $options: 'i' };
     }
     if (minPrice) {
       query.price = { ...query.price, $gte: minPrice };
@@ -102,11 +114,11 @@ exports.getTours = async (req, res) => {
       sortOptions[field] = direction === 'asc' ? 1 : -1;
     }
 
+    console.log('MongoDB query:', JSON.stringify(query, null, 2));
+
     const amenitiesList = await Tour.distinct('accommodation.amenities');
-
-    console.log('getTours query:', JSON.stringify(query), 'sort:', JSON.stringify(sortOptions), 'amenitiesList:', amenitiesList);
-
     const tours = await Tour.find(query)
+      .populate('accommodation.hotel')
       .sort(sortOptions)
       .skip(skip)
       .limit(limit)
@@ -114,18 +126,16 @@ exports.getTours = async (req, res) => {
     const totalTours = await Tour.countDocuments(query);
     const totalPages = Math.ceil(totalTours / limit);
 
+    console.log('Tours found:', tours.length, 'Total:', totalTours, 'Query:', JSON.stringify(query, null, 2));
+
     const regions = await Region.find({}).select('name').lean();
 
-    console.log('getTours result:', { tours: tours.length, totalTours, totalPages, page, type, search, region, minPrice, maxPrice, startDate: startDate ? startDate.toISOString() : '', endDate: endDate ? endDate.toISOString() : '', sortBy, minDuration, maxDuration, amenities });
-
-    // Перенаправление на последнюю страницу, если page > totalPages
     if (page > totalPages && totalPages > 0) {
-      console.log(`Page ${page} exceeds totalPages ${totalPages}, redirecting to last page`);
       const redirectParams = new URLSearchParams();
       redirectParams.append('page', totalPages);
       if (type && type !== 'all') redirectParams.append('type', type);
       if (search) redirectParams.append('search', search);
-      if (region) redirectParams.append('region', region);
+      if (region) redirectParams.append('region', encodeURIComponent(region));
       if (minPrice) redirectParams.append('minPrice', minPrice);
       if (maxPrice) redirectParams.append('maxPrice', maxPrice);
       if (startDate) redirectParams.append('startDate', startDate.toISOString().split('T')[0]);
@@ -159,7 +169,7 @@ exports.getTours = async (req, res) => {
       error: tours.length ? null : 'Нет туров для выбранных фильтров',
     });
   } catch (error) {
-    console.error('Error in getTours:', error.message, error.stack);
+    console.error('Ошибка в getTours:', error.message, error.stack);
     res.render('tours/index', {
       tours: [],
       regions: [],
@@ -183,7 +193,6 @@ exports.getTours = async (req, res) => {
   }
 };
 
-// Остальные методы остаются без изменений
 exports.filterTours = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -191,7 +200,8 @@ exports.filterTours = async (req, res) => {
     const skip = (page - 1) * limit;
     const type = req.query.type || 'all';
     let search = req.query.search ? decodeURIComponent(req.query.search).trim() : '';
-    const region = req.query.region ? req.query.region.trim() : '';
+    // Декодируем параметр region
+    const region = req.query.region ? decodeURIComponent(req.query.region).trim() : '';
     const minPrice = req.query.minPrice ? parseInt(req.query.minPrice) : '';
     const maxPrice = req.query.maxPrice ? parseInt(req.query.maxPrice) : '';
     const startDate = req.query.startDate ? new Date(req.query.startDate) : '';
@@ -200,8 +210,21 @@ exports.filterTours = async (req, res) => {
     const minDuration = req.query.minDuration ? parseInt(req.query.minDuration) : '';
     const maxDuration = req.query.maxDuration ? parseInt(req.query.maxDuration) : '';
 
+    console.log('Filter tours params:', {
+      page,
+      type,
+      search,
+      region,
+      minPrice,
+      maxPrice,
+      startDate,
+      endDate,
+      sortBy,
+      minDuration,
+      maxDuration,
+    });
+
     let amenities = [];
-    console.log('Raw amenities query in filterTours:', req.query.amenities);
     if (req.query.amenities) {
       if (Array.isArray(req.query.amenities)) {
         amenities = req.query.amenities.map(item => item.trim());
@@ -209,7 +232,6 @@ exports.filterTours = async (req, res) => {
         amenities = req.query.amenities.split(',').map(item => item.trim());
       }
     }
-    console.log('Processed amenities in filterTours:', amenities);
 
     const query = {};
     if (type && type !== 'all') {
@@ -221,10 +243,15 @@ exports.filterTours = async (req, res) => {
         { title: { $regex: escapedSearch, $options: 'i' } },
         { description: { $regex: escapedSearch, $options: 'i' } },
       ];
-      console.log('Search query applied:', { search, escapedSearch, $or: query.$or });
     }
     if (region) {
-      query['location.region'] = region;
+      // Проверяем существование региона
+      const regionExists = await Region.findOne({ name: region }).lean();
+      if (!regionExists) {
+        console.log(`Region "${region}" not found in Region collection`);
+        return res.status(400).json({ error: `Регион "${region}" не найден` });
+      }
+      query['location.region'] = { $regex: `^${region}$`, $options: 'i' };
     }
     if (minPrice) {
       query.price = { ...query.price, $gte: minPrice };
@@ -257,9 +284,10 @@ exports.filterTours = async (req, res) => {
       sortOptions[field] = direction === 'asc' ? 1 : -1;
     }
 
-    console.log('filterTours query:', JSON.stringify(query), 'sort:', JSON.stringify(sortOptions));
+    console.log('MongoDB query:', JSON.stringify(query, null, 2));
 
     const tours = await Tour.find(query)
+      .populate('accommodation.hotel')
       .sort(sortOptions)
       .skip(skip)
       .limit(limit)
@@ -267,7 +295,7 @@ exports.filterTours = async (req, res) => {
     const totalTours = await Tour.countDocuments(query);
     const totalPages = Math.ceil(totalTours / limit);
 
-    console.log('filterTours result:', { tours: tours.length, totalTours, totalPages, page, type, search, region, minPrice, maxPrice, startDate: startDate ? startDate.toISOString() : '', endDate: endDate ? endDate.toISOString() : '', sortBy, minDuration, maxDuration, amenities });
+    console.log('Tours found:', tours.length, 'Total:', totalTours, 'Query:', JSON.stringify(query, null, 2));
 
     res.json({
       tours,
@@ -278,17 +306,19 @@ exports.filterTours = async (req, res) => {
       currentType: type,
     });
   } catch (error) {
-    console.error('Error in filterTours:', error.message, error.stack);
+    console.error('Ошибка в filterTours:', error.message, error.stack);
     res.status(500).json({ error: `Ошибка загрузки туров: ${error.message}` });
   }
 };
+
+// Остальные методы остаются без изменений
 
 exports.getTourById = async (req, res) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
       return res.status(404).render('error', { message: 'Неверный идентификатор тура' });
     }
-    const tour = await Tour.findById(req.params.id).populate('reviews.userId', 'username').lean();
+    const tour = await Tour.findById(req.params.id).populate('accommodation.hotel').populate('reviews.userId', 'username').lean();
     if (!tour) {
       return res.status(404).render('error', { message: 'Тур не найден' });
     }
@@ -303,11 +333,12 @@ exports.getTourById = async (req, res) => {
       csrfToken: req.csrfToken ? req.csrfToken() : '',
     });
   } catch (error) {
-    console.error('Error in getTourById:', error.message, error.stack);
+    console.error('Ошибка в getTourById:', error.message, error.stack);
     res.status(500).render('error', { message: 'Ошибка загрузки тура' });
   }
 };
 
+// Остальные методы остаются без изменений
 exports.getTourAvailability = async (req, res) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
@@ -324,33 +355,27 @@ exports.getTourAvailability = async (req, res) => {
     const currentDate = new Date();
     const availability = [];
 
-    // Получение бронирований
     const bookings = await Booking.find({
       tourId: tour._id,
       status: { $in: ['confirmed', 'pending'] },
       tourDate: { $gte: startDate, $lte: endDate },
     }).lean();
 
-    // Агрегация бронирований по датам
     const bookingsByDate = bookings.reduce((acc, booking) => {
       const tourDate = new Date(booking.tourDate);
-      // Проверяем, не истёк ли тур (tourDate + durationDays <= currentDate)
       const tourEndDate = new Date(tourDate);
       tourEndDate.setDate(tourEndDate.getDate() + durationDays);
       if (tourEndDate > currentDate) {
-        // Для пассивных и оздоровительных туров учитываем все даты тура
         if (['passive', 'health'].includes(type)) {
           for (let i = 0; i < durationDays; i++) {
             const currentTourDate = new Date(tourDate);
             currentTourDate.setDate(tourDate.getDate() + i);
-            // Учитываем только даты в пределах сезона
             if (currentTourDate >= startDate && currentTourDate <= endDate) {
               const dateStr = currentTourDate.toISOString().split('T')[0];
               acc[dateStr] = (acc[dateStr] || 0) + booking.participants;
             }
           }
         } else {
-          // Для других типов туров учитываем только tourDate
           const dateStr = tourDate.toISOString().split('T')[0];
           acc[dateStr] = (acc[dateStr] || 0) + booking.participants;
         }
@@ -359,7 +384,6 @@ exports.getTourAvailability = async (req, res) => {
     }, {});
 
     if (['passive', 'health'].includes(type)) {
-      // Для пассивного и оздоровительного отдыха учитываем только hotelCapacity
       for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
         const dateStr = d.toISOString().split('T')[0];
         const bookedParticipants = bookingsByDate[dateStr] || 0;
@@ -372,7 +396,6 @@ exports.getTourAvailability = async (req, res) => {
         });
       }
     } else if (['active', 'camping', 'excursion'].includes(type)) {
-      // Для активного, кемпинга и экскурсионного отдыха — интервалы по durationDays
       for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + durationDays)) {
         const dateStr = d.toISOString().split('T')[0];
         const bookedParticipants = bookingsByDate[dateStr] || 0;
@@ -386,11 +409,9 @@ exports.getTourAvailability = async (req, res) => {
       }
     }
 
-    console.log('getTourAvailability result:', { tourId: req.params.id, type, availability });
-
     res.json(availability);
   } catch (error) {
-    console.error('Error in getTourAvailability:', error.message);
+    console.error('Ошибка в getTourAvailability:', error.message);
     res.status(500).json({ error: 'Ошибка получения доступности' });
   }
 };
@@ -422,7 +443,7 @@ exports.addReview = async (req, res) => {
     await tour.save();
     res.redirect(`/tours/${req.params.id}`);
   } catch (error) {
-    console.error('Error in addReview:', error.message, error.stack);
+    console.error('Ошибка в addReview:', error.message, error.stack);
     res.status(500).render('tours/tour', {
       tour: tour ? tour.toObject() : null,
       user: req.user || null,

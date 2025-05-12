@@ -11,6 +11,17 @@
   <link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet' />
   <link rel="stylesheet" href="https://unpkg.com/tippy.js@6/themes/light.css">
   <link rel="stylesheet" href="/css/style.css">
+  <style>
+    #tourMap { height: 400px; width: 100%; }
+    #paymentModal { z-index: 2000; }
+    #paymentModal input {
+      transition: border-color 0.2s;
+    }
+    #paymentModal input:focus {
+      border-color: #28a745;
+      outline: none;
+    }
+  </style>
 </head>
 <body class="bg-gray-100 font-sans">
   {{> navbar}}
@@ -42,6 +53,12 @@
         </div>
       </div>
 
+      <!-- Карта -->
+      <div class="mt-8">
+        <h2 class="text-2xl font-bold mb-4">Местоположение</h2>
+        <div id="tourMap" class="rounded-lg"></div>
+      </div>
+
       <div class="mt-8">
         <h2 class="text-2xl font-bold mb-4">Календарь доступности</h2>
         <div id="calendar" class="bg-white p-4 rounded-lg"></div>
@@ -71,10 +88,53 @@
             <p id="booking-success" class="text-green-600 mb-4 hidden"></p>
             <button type="submit" id="book-tour-btn" class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded">Забронировать</button>
           </form>
+
+          <!-- Статус брони -->
+          <div id="booking-status" class="mt-4 hidden">
+            <h3 class="text-lg font-semibold">Статус брони</h3>
+            <p><strong>Статус:</strong> <span id="booking-status-text"></span></p>
+            <p><strong>Оплата:</strong> <span id="payment-status-text"></span></p>
+            <button id="pay-button" onclick="openPaymentModal()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 hidden">Оплатить</button>
+            <p id="payment-success" class="text-green-600 mt-2 hidden">Бронь подтверждена!</p>
+            <p id="payment-error" class="text-red-600 mt-2 hidden"></p>
+          </div>
         </div>
       {{else}}
         <p class="mt-4 text-gray-600">Войдите, чтобы забронировать тур.</p>
       {{/if}}
+
+      <!-- Модальное окно оплаты -->
+      <div id="paymentModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
+        <div class="bg-white p-6 rounded-lg w-full max-w-md">
+          <h2 class="text-xl font-semibold mb-4">Оплата брони</h2>
+          <form id="paymentForm">
+            <input type="hidden" name="_csrf" value="{{csrfToken}}">
+            <input type="hidden" name="bookingId" id="paymentBookingId">
+            <div class="mb-4">
+              <label for="cardNumber" class="block text-sm font-medium">Номер карты</label>
+              <input type="text" id="cardNumber" name="cardNumber" maxlength="16" placeholder="1234 5678 9012 3456" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+            </div>
+            <div class="mb-4">
+              <label for="cardHolder" class="block text-sm font-medium">Имя держателя</label>
+              <input type="text" id="cardHolder" name="cardHolder" placeholder="IVAN IVANOV" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+            </div>
+            <div class="flex space-x-4 mb-4">
+              <div class="w-1/2">
+                <label for="expiry" class="block text-sm font-medium">Срок действия</label>
+                <input type="text" id="expiry" name="expiry" placeholder="MM/YY" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+              </div>
+              <div class="w-1/2">
+                <label for="cvv" class="block text-sm font-medium">CVV</label>
+                <input type="text" id="cvv" name="cvv" maxlength="3" placeholder="123" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+              </div>
+            </div>
+            <div class="flex justify-end space-x-2">
+              <button type="button" onclick="closePaymentModal()" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Отмена</button>
+              <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Оплатить</button>
+            </div>
+          </form>
+        </div>
+      </div>
 
       <div class="mt-8">
         <h2 class="text-2xl font-bold mb-4">Отзывы</h2>
@@ -135,15 +195,19 @@
               {{else if (eq tour.accommodation.type 'retreat')}}Ретрит
               {{else}}Без размещения{{/if}}
             </p>
-            <p><strong>Название:</strong> {{tour.accommodation.name}}</p>
-            <p><strong>Рейтинг:</strong> {{tour.accommodation.rating}}/5</p>
-            <p><strong>Удобства:</strong> 
-              {{#each tour.accommodation.amenities}}
-                {{this}}{{#unless @last}}, {{/unless}}
-              {{else}}
-                Нет удобств
-              {{/each}}
-            </p>
+            {{#if tour.accommodation.hotel}}
+              <p><strong>Название:</strong> {{tour.accommodation.hotel.name}}</p>
+              <p><strong>Рейтинг:</strong> {{tour.accommodation.hotel.rating}}/5</p>
+              <p><strong>Удобства:</strong> 
+                {{#each tour.accommodation.hotel.amenities}}
+                  {{this}}{{#unless @last}}, {{/unless}}
+                {{else}}
+                  Нет удобств
+                {{/each}}
+              </p>
+            {{else}}
+              <p>Информация об отеле отсутствует</p>
+            {{/if}}
           </div>
           <div>
             <h3 class="text-xl font-semibold mb-2">Сезон</h3>
@@ -187,6 +251,7 @@
   <script>
     window.tourData = {
       id: '{{tour._id}}',
+      title: '{{tour.title}}',
       type: '{{tour.type}}',
       season: {
         start: '{{seasonStart}}',
@@ -194,11 +259,16 @@
       },
       maxGroupSize: {{tour.maxGroupSize}},
       minGroupSize: {{tour.minGroupSize}},
-      durationDays: {{tour.durationDays}}
+      durationDays: {{tour.durationDays}},
+      coordinates: {
+        lat: {{tour.location.coordinates.lat}},
+        lng: {{tour.location.coordinates.lng}}
+      }
     };
   </script>
   <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'></script>
   <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/ru.js'></script>
   <script src="/js/booking.js"></script>
+  <script src="/js/payment.js"></script>
 </body>
 </html>

@@ -7,12 +7,24 @@ const passport = require('passport');
 const dotenv = require('dotenv');
 const flash = require('connect-flash');
 const csrf = require('csurf');
+const fs = require('fs');
+const cookieParser = require('cookie-parser');
+const Achievement = require('./models/Achievement');
+const http = require('http');
+const { Server } = require('socket.io');
+const multer = require('multer'); // Добавляем multer
 
 // Загрузка переменных окружения
 dotenv.config();
 
 // Инициализация приложения
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server);
+
+// Настройка multer для обработки FormData (без загрузки файлов)
+const upload = multer();
+
 
 // Подключение к MongoDB
 const connectDB = require('./config/db');
@@ -29,6 +41,20 @@ const hbs = exphbs.create({
 });
 
 // Регистрация помощников для Handlebars
+hbs.handlebars.registerHelper('if', function (conditional, options) {
+  console.log('Handlebars if called with:', {
+    conditional,
+    args: arguments.length,
+    arguments: Array.from(arguments).slice(0, -1)
+  });
+  if (arguments.length !== 2) {
+    throw new Error(`#if requires exactly one argument, but ${arguments.length - 1} were provided: ${JSON.stringify(Array.from(arguments).slice(0, -1))}`);
+  }
+  if (conditional) {
+    return options.fn(this);
+  }
+  return options.inverse(this);
+});
 hbs.handlebars.registerHelper('eq', function (a, b) {
   return a === b;
 });
@@ -59,7 +85,12 @@ hbs.handlebars.registerHelper('join', function (array, separator) {
   return array ? array.join(separator) : '';
 });
 hbs.handlebars.registerHelper('includes', function (array, value, options) {
-  const values = array ? array.split(',') : [];
+  let values = [];
+  if (typeof array === 'string') {
+    values = array.split(',');
+  } else if (Array.isArray(array)) {
+    values = array;
+  }
   return values.includes(value) ? options.fn(this) : '';
 });
 hbs.handlebars.registerHelper('contains', function (array, value) {
@@ -92,26 +123,49 @@ app.set('views', path.join(__dirname, 'views'));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
-app.use(session({
+
+// Создание папок для загрузок и иконок достижений
+fs.mkdirSync(path.join(__dirname, 'public/uploads'), { recursive: true });
+fs.mkdirSync(path.join(__dirname, 'public/images/achievements'), { recursive: true });
+
+app.use(cookieParser());
+const sessionMiddleware = session({
   secret: process.env.SESSION_SECRET || 'secret',
   resave: false,
   saveUninitialized: false,
   cookie: {
     maxAge: 24*60*60*1000,
   },
-}));
+});
+app.use(sessionMiddleware);
 app.use(passport.initialize());
 app.use(passport.session());
 app.use(flash());
 
 // Инициализация CSRF-защиты
 const csrfProtection = csrf({
-  coockie: true,
+  cookie: true,
   ignoreMethods: ['GET', 'HEAD', 'OPTIONS'],
 });
 app.use((req, res, next) => {
-  if (['/auth/login', '/auth/register', '/bookings/clean-expired'].includes(req.path) && req.method === 'POST') {
-    console.log(`Bypassing CSRF protection for ${req.path}`);
+  // Список маршрутов для исключения CSRF
+  const csrfExemptPaths = [
+    '/auth/login',
+    '/auth/register',
+    '/bookings/clean-expired',
+    '/community/posts',
+    '/community/posts/:id/like',
+    '/community/posts/:id/comment',
+    '/bookings',
+  ];
+  // Проверка статических путей
+  if (csrfExemptPaths.includes(req.path) && req.method === 'POST') {
+    console.log(`Bypassing CSRF protection for static path ${req.path}`);
+    return next();
+  }
+  // Проверка динамического маршрута /bookings/:id/pay
+  if (req.path.match(/^\/bookings\/[a-f0-9]{24}\/pay$/) && req.method === 'POST') {
+    console.log(`Bypassing CSRF protection for dynamic path ${req.path}`);
     return next();
   }
   csrfProtection(req, res, next);
@@ -136,16 +190,88 @@ app.use((req, res, next) => {
 // Подключение Passport
 require('./config/passport');
 
+// Инициализация достижений
+const initializeAchievements = async () => {
+  const achievements = [
+    {
+      name: 'Новичок',
+      description: 'Создайте свой первый пост в сообществе',
+      condition: 'create_post_1',
+      icon: '/images/achievements/newbie.png'
+    },
+    {
+      name: 'Активный путешественник',
+      description: 'Создайте 5 постов в сообществе',
+      condition: 'create_posts_5',
+      icon: '/images/achievements/active_traveler.png'
+    },
+    {
+      name: 'Популярный автор',
+      description: 'Получите 10 лайков на одном посте',
+      condition: 'likes_on_post_10',
+      icon: '/images/achievements/popular_author.png'
+    },
+    {
+      name: 'Комментатор',
+      description: 'Оставьте 10 комментариев',
+      condition: 'comments_10',
+      icon: '/images/achievements/commentator.png'
+    },
+    {
+      name: 'Турист',
+      description: 'Забронируйте свой первый тур',
+      condition: 'book_tour_1',
+      icon: '/images/achievements/tourist.png'
+    },
+    {
+      name: 'Критик',
+      description: 'Оставьте 3 отзыва о турах или отелях',
+      condition: 'reviews_3',
+      icon: '/images/achievements/critic.png'
+    }
+  ];
+
+  try {
+    for (const ach of achievements) {
+      await Achievement.findOneAndUpdate(
+        { condition: ach.condition },
+        ach,
+        { upsert: true, new: true }
+      );
+    }
+    console.log('Achievements initialized');
+  } catch (error) {
+    console.error('Error initializing achievements:', error.message);
+  }
+};
+
+// Вызываем инициализацию после подключения к БД
+mongoose.connection.once('open', async () => {
+  await initializeAchievements();
+});
+
+// Socket.IO
+io.use((socket, next) => {
+  sessionMiddleware(socket.request, {}, next);
+});
+const chatHandler = require('./services/chatHandler');
+io.on('connection', (socket) => {
+  chatHandler(socket, io);
+});
+
 // Маршруты
 app.use('/', require('./routes/mainRoutes'));
 app.use('/tours', require('./routes/tourRoutes'));
 app.use('/auth', require('./routes/authRoutes'));
 app.use('/regions', require('./routes/regionRoutes'));
-app.use('/bookings', require('./routes/bookingRoutes'));
+app.use('/bookings', upload.none(), require('./routes/bookingRoutes')); // Добавляем upload.none() для парсинга FormData
 app.use('/profile', require('./routes/profileRoutes'));
 app.use('/admin', require('./routes/adminRoutes'));
 app.use('/news', require('./routes/newsRoutes'));
 app.use('/travel', require('./routes/travelRoutes'));
+app.use('/hotels', require('./routes/hotelRoutes'));
+app.use('/attractions', require('./routes/attractionRoutes'));
+app.use('/community', require('./routes/community'));
 
 // Обработка ошибок
 app.use((err, req, res, next) => {
@@ -159,6 +285,6 @@ app.use((err, req, res, next) => {
 
 // Запуск сервера
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Сервер запущен на порту ${PORT}`);
 });

@@ -8,6 +8,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const bookTourBtn = document.querySelector('#book-tour-btn');
   const bookingError = document.querySelector('#booking-error');
   const bookingSuccess = document.querySelector('#booking-success');
+  const bookingStatus = document.querySelector('#booking-status');
+  const bookingStatusText = document.querySelector('#booking-status-text');
+  const paymentStatusText = document.querySelector('#payment-status-text');
+  const payButton = document.querySelector('#pay-button');
 
   if (!calendarEl || !bookingForm || !tourDateInput || !participantsInput || !bookTourBtn || !bookingError || !bookingSuccess) {
     console.error('Required elements not found:', {
@@ -18,6 +22,16 @@ document.addEventListener('DOMContentLoaded', () => {
       bookTourBtn: !!bookTourBtn,
       bookingError: !!bookingError,
       bookingSuccess: !!bookingSuccess,
+    });
+    return;
+  }
+
+  if (!bookingStatus || !bookingStatusText || !paymentStatusText || !payButton) {
+    console.error('Payment status elements not found:', {
+      bookingStatus: !!bookingStatus,
+      bookingStatusText: !!bookingStatusText,
+      paymentStatusText: !!paymentStatusText,
+      payButton: !!payButton,
     });
     return;
   }
@@ -246,8 +260,16 @@ document.addEventListener('DOMContentLoaded', () => {
       console.log('Booking response data:', data);
 
       bookingError.classList.add('hidden');
-      bookingSuccess.textContent = data.message || 'Тур успешно забронирован!';
+      bookingSuccess.textContent = data.message || 'Тур успешно забронирован! Пожалуйста, оплатите, чтобы подтвердить.';
       bookingSuccess.classList.remove('hidden');
+      
+      // Показать блок статуса брони
+      bookingStatus.classList.remove('hidden');
+      bookingStatusText.textContent = 'pending';
+      paymentStatusText.textContent = 'pending';
+      payButton.classList.remove('hidden');
+      payButton.onclick = () => openPaymentModal(data.bookingId);
+
       bookingForm.reset();
       calendar.refetchEvents();
       if (['active', 'camping', 'excursion'].includes(tourType)) {

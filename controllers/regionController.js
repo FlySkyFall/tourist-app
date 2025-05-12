@@ -18,14 +18,14 @@ exports.getRegions = async (req, res) => {
   }
 };
 
-exports.getRegionById = async (req, res) => {
+exports.getRegionById = async (req) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return res.status(404).render('error', { message: 'Неверный идентификатор региона' });
+      throw new Error('Неверный идентификатор региона');
     }
     const region = await Region.findById(req.params.id).lean();
     if (!region) {
-      return res.status(404).render('error', { message: 'Регион не найден' });
+      throw new Error('Регион не найден');
     }
 
     const page = parseInt(req.query.page) || 1;
@@ -37,15 +37,15 @@ exports.getRegionById = async (req, res) => {
     console.log('Query params:', { id: req.params.id, page, type });
 
     if (page < 1) {
-      return res.render('regions/region', {
+      return {
         region,
         tours: [],
         currentPage: 1,
         totalPages: 1,
         totalTours: 0,
         currentType: type,
-        error: 'Неверный номер страницы',
-      });
+        error: 'Неверный номер страницы'
+      };
     }
 
     const filter = { 'location.region': region.name };
@@ -65,30 +65,31 @@ exports.getRegionById = async (req, res) => {
     console.log('Tours found:', tours.length, 'Total tours:', totalTours);
 
     if (page > totalPages && totalTours > 0) {
-      return res.render('regions/region', {
+      return {
         region,
         tours: [],
         currentPage: page,
         totalPages,
         totalTours,
         currentType: type,
-        error: 'Такой страницы не существует',
-      });
+        error: 'Такой страницы не существует'
+      };
     }
 
-    res.render('regions/region', {
+    return {
       region,
       tours,
       currentPage: page,
       totalPages,
+      totalPages,
       totalTours,
       toursOnPage: tours.length,
       currentType: type,
-      error: null,
-    });
+      error: null
+    };
   } catch (error) {
     console.error('Ошибка в getRegionById:', error);
-    res.status(500).render('error', { message: 'Ошибка загрузки региона' });
+    throw error;
   }
 };
 

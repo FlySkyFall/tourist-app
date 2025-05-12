@@ -18,14 +18,12 @@ const tourSchema = new mongoose.Schema({
     },
   },
   accommodation: {
+    hotel: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: false },
     type: {
       type: String,
       enum: ['hotel', 'sanatorium', 'camping', 'retreat', 'none'],
       required: true,
     },
-    name: { type: String, required: true },
-    rating: { type: Number, min: 0, max: 5, default: 0 },
-    amenities: [String],
   },
   activities: [
     {

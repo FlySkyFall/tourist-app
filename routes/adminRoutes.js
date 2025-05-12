@@ -35,7 +35,7 @@ router.post(
   (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      console.log('Validation errors:', errors.array()); // Отладка
+      console.log('Validation errors:', errors.array());
       req.flash('error', errors.array().map(err => err.msg).join(', '));
       return res.redirect('/admin/tours/new');
     }
@@ -67,7 +67,7 @@ router.post(
   (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      console.log('Validation errors:', errors.array()); // Отладка
+      console.log('Validation errors:', errors.array());
       req.flash('error', errors.array().map(err => err.msg).join(', '));
       return res.redirect(`/admin/tours/${req.params.id}/edit`);
     }
@@ -105,5 +105,9 @@ router.post(
   },
   adminController.updateUserRole
 );
+
+// Управление постами сообщества
+router.get('/posts', authMiddleware, adminMiddleware, adminController.getPosts);
+router.post('/posts/:id/toggle', authMiddleware, adminMiddleware, adminController.togglePostVisibility);
 
 module.exports = router;

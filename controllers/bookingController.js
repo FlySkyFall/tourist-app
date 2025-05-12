@@ -69,6 +69,7 @@ exports.createBooking = async (req, res) => {
       tourDate: selectedDate,
       participants,
       status: 'pending',
+      paymentStatus: 'pending',
     });
 
     await booking.save();
@@ -82,11 +83,15 @@ exports.createBooking = async (req, res) => {
           tourDate: selectedDate,
           status: 'pending',
           participants,
+          paymentStatus: 'pending',
         },
       },
     });
 
-    return res.status(201).json({ message: 'Бронирование успешно создано' });
+    return res.status(201).json({ 
+      message: 'Бронирование успешно создано. Пожалуйста, оплатите, чтобы подтвердить.',
+      bookingId: booking._id
+    });
   } catch (error) {
     console.error('Error in createBooking:', error.message, error.stack);
     return res.status(500).json({ error: `Ошибка бронирования: ${error.message}` });
@@ -103,7 +108,7 @@ exports.getUserBookings = async (req, res) => {
       .populate('tourId', 'title')
       .lean();
 
-    console.log('Fetched bookings:', bookings.map(b => ({ _id: b._id, tourId: b.tourId, status: b.status })));
+    console.log('Fetched bookings:', bookings.map(b => ({ _id: b._id, tourId: b.tourId, status: b.status, paymentStatus: b.paymentStatus })));
 
     const invalidBookings = bookings.filter(b => !mongoose.Types.ObjectId.isValid(b._id));
     if (invalidBookings.length > 0) {
@@ -227,5 +232,86 @@ exports.cleanExpiredBookings = async (req, res) => {
     if (res) {
       return res.status(500).json({ error: `Ошибка очистки бронирований: ${error.message}` });
     }
+  }
+};
+
+exports.processPayment = async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Требуется авторизация' });
+    }
+
+    const bookingId = req.params.id;
+    console.log('Processing payment for bookingId:', bookingId, 'req.body:', req.body);
+
+    if (!mongoose.Types.ObjectId.isValid(bookingId)) {
+      return res.status(400).json({ error: 'Неверный идентификатор бронирования' });
+    }
+
+    if (!req.body || !req.body.cardNumber || !req.body.cardHolder || !req.body.expiry || !req.body.cvv) {
+      console.error('Missing payment data:', req.body);
+      return res.status(400).json({ error: 'Все поля формы оплаты обязательны' });
+    }
+
+    const { cardNumber, cardHolder, expiry, cvv } = req.body;
+
+    // Валидация данных карты
+    if (cardNumber.length !== 16 || !/^\d+$/.test(cardNumber)) {
+      return res.status(400).json({ error: 'Некорректный номер карты' });
+    }
+    if (!cardHolder || cardHolder.trim().length < 2) {
+      return res.status(400).json({ error: 'Укажите имя держателя карты' });
+    }
+    if (!expiry || !/^(0[1-9]|1[0-2])\/[0-9]{2}$/.test(expiry)) {
+      return res.status(400).json({ error: 'Некорректный срок действия' });
+    }
+    if (!cvv || cvv.length !== 3 || !/^\d+$/.test(cvv)) {
+      return res.status(400).json({ error: 'Некорректный CVV' });
+    }
+
+    const booking = await Booking.findOne({ _id: bookingId, userId: req.user._id });
+    if (!booking) {
+      return res.status(404).json({ error: 'Бронирование не найдено или не принадлежит вам' });
+    }
+
+    const tour = await Tour.findById(booking.tourId);
+    if (!tour) {
+      return res.status(404).json({ error: 'Тур не найден' });
+    }
+
+    // Имитация обработки платежа (10% шанс отклонения)
+    const isPaymentSuccessful = Math.random() > 0.1;
+
+    if (isPaymentSuccessful) {
+      booking.paymentStatus = 'completed';
+      booking.status = 'confirmed';
+      await booking.save();
+
+      await User.updateOne(
+        { _id: req.user._id, 'bookings._id': bookingId },
+        { $set: { 'bookings.$.status': 'confirmed', 'bookings.$.paymentStatus': 'completed' } }
+      );
+
+      return res.status(200).json({ 
+        message: 'Оплата прошла успешно! Бронь подтверждена.',
+        bookingId
+      });
+    } else {
+      booking.paymentStatus = 'failed';
+      await booking.save();
+
+      await User.updateOne(
+        { _id: req.user._id, 'bookings._id': bookingId },
+        { $set: { 'bookings.$.paymentStatus': 'failed' } }
+      );
+
+      return res.status(400).json({ 
+        error: 'Оплата отклонена. Попробуйте снова.',
+        bookingId
+      });
+    }
+  } catch (error) {
+    console.error('Error in processPayment:', error.message, error.stack);
+    return res.status(500).json({ error: `Ошибка обработки оплаты: ${error.message}` });
   }
 };

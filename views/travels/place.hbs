@@ -15,11 +15,15 @@
       {{#if place}}
         <div class="max-w-3xl mx-auto">
           <h2 class="text-3xl font-bold mb-4">{{place.name}}</h2>
-          <img src="{{place.imageUrl}}" alt="{{place.name}}" class="w-full h-96 object-cover rounded-lg mb-6" onerror="this.src='/img/placeholder.jpg'">
+          <img src="{{place.images.[0]}}" alt="{{place.name}}" class="w-full h-96 object-cover rounded-lg mb-6" onerror="this.src='/img/placeholder.jpg'">
           <p class="text-gray-600 mb-4">{{place.description}}</p>
-          <p class="text-gray-500 mb-4"><strong>Категория:</strong> {{place.category}}</p>
-          {{#if place.location}}
-            <p class="text-gray-500 mb-4"><strong>Местоположение:</strong> {{place.location}}</p>
+          <p class="text-gray-500 mb-4"><strong>Категория:</strong> 
+            {{#if (contains place 'rating')}}Отель
+            {{else if (contains place 'category')}}Достопримечательность
+            {{else}}Ресторан{{/if}}
+          </p>
+          {{#if place.location.region}}
+            <p class="text-gray-500 mb-4"><strong>Местоположение:</strong> {{place.location.region}}</p>
           {{/if}}
           {{#if place.website}}
             <p class="text-gray-500 mb-4"><strong>Веб-сайт:</strong> <a href="{{place.website}}" target="_blank" class="text-blue-600 hover:underline">{{place.website}}</a></p>

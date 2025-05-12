@@ -1,29 +1,31 @@
 const User = require('../models/User');
 const Booking = require('../models/Booking');
 
-exports.getProfile = async (req, res) => {
+exports.getProfile = async (req) => {
   try {
     if (!req.user) {
-      req.flash('error', 'Войдите в аккаунт для просмотра профиля');
-      return res.redirect('/auth/login');
+      return {
+        error: 'Войдите в аккаунт для просмотра профиля',
+        redirect: '/auth/login'
+      };
     }
 
     // Convert Mongoose document to plain object if necessary
     const user = req.user.toObject ? req.user.toObject() : req.user;
-    console.log('User data sent to profile:', user); // Debugging
+    console.log('User data prepared for profile:', user); // Debugging
 
     const bookings = await Booking.find({ userId: req.user._id })
       .populate('tourId')
       .lean();
 
-    res.render('profile', {
+    return {
       user,
       bookings,
-      message: req.flash('success') || req.flash('error'),
-    });
+      message: req.flash('success') || req.flash('error')
+    };
   } catch (error) {
     console.error('Error in getProfile:', error.message, error.stack);
-    res.status(500).render('error', { message: 'Ошибка загрузки профиля' });
+    throw error;
   }
 };
 

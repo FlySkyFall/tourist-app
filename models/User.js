@@ -18,6 +18,10 @@ const userSchema = new mongoose.Schema({
     status: { type: String, enum: ['confirmed', 'pending', 'cancelled'], default: 'pending' },
     participants: Number,
   }],
+  achievements: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'UserAchievement'
+  }],
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
 });

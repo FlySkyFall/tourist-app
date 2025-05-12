@@ -6,6 +6,9 @@
   <title>{{region.name}} - Краснодарский край</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <link rel="stylesheet" href="/css/style.css">
+  <style>
+    #regionMap { height: 400px; width: 100%; }
+  </style>
 </head>
 <body class="bg-gray-100 font-sans">
   {{> navbar}}
@@ -34,6 +37,12 @@
             </p>
             <a href="/tours?region={{region.name}}" class="bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 rounded-lg">Найти туры</a>
           </div>
+        </div>
+
+        <!-- Карта -->
+        <div class="mt-8">
+          <h2 class="text-2xl font-bold mb-4">Карта региона</h2>
+          <div id="regionMap" class="rounded-lg"></div>
         </div>
 
         <div class="mt-12">
@@ -73,5 +82,28 @@
   {{> footer}}
 
   <script src="/js/main.js"></script>
+  <script>
+    window.regionData = {
+      name: '{{region.name}}',
+      coordinates: {
+        lat: {{region.coordinates.lat}},
+        lng: {{region.coordinates.lng}}
+      }
+    };
+    window.attractionsData = [
+      {{#each attractions}}
+        {
+          _id: '{{this._id}}',
+          name: '{{this.name}}',
+          location: {
+            coordinates: {
+              lat: {{this.location.coordinates.lat}},
+              lng: {{this.location.coordinates.lng}}
+            }
+          }
+        }{{#unless @last}},{{/unless}}
+      {{/each}}
+    ];
+  </script>
 </body>
 </html>
