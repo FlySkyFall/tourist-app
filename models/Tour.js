@@ -24,6 +24,7 @@ const tourSchema = new mongoose.Schema({
       enum: ['hotel', 'sanatorium', 'camping', 'retreat', 'none'],
       required: true,
     },
+    amenities: [{ type: String }], // Добавлено поле для удобств
   },
   activities: [
     {
@@ -48,7 +49,7 @@ const tourSchema = new mongoose.Schema({
   },
   minGroupSize: { type: Number, required: true, min: 1 },
   maxGroupSize: { type: Number, required: true, min: 1 },
-  hotelCapacity: { type: Number, min: 1 }, // Вместимость отеля для passive и health
+  hotelCapacity: { type: Number, min: 1 },
   images: [String],
   isFeatured: { type: Boolean, default: false },
   reviews: [

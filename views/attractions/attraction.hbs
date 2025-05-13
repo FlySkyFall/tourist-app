@@ -51,10 +51,11 @@
     window.attractionData = {
       name: '{{attraction.name}}',
       coordinates: {
-        lat: {{attraction.location.coordinates.lat}},
-        lng: {{attraction.location.coordinates.lng}}
+        lat: {{attraction.location.coordinates.coordinates.[1]}},
+        lng: {{attraction.location.coordinates.coordinates.[0]}}
       }
     };
+    console.log('attractionData:', window.attractionData);
   </script>
 </body>
 </html>

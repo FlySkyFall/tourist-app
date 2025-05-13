@@ -1,13 +1,5 @@
 /* Кастомные стили для главной страницы и других страниц */
-#tour-carousel {
-  display: flex;
-  transition: transform 0.3s ease-in-out;
-  width: 100%;
-  overflow: hidden;
-  touch-action: none; /* Запрещаем сенсорную прокрутку */
-  -webkit-overflow-scrolling: none; /* Отключаем инерционную прокрутку на iOS */
-  user-select: none; /* Запрещаем выделение текста */
-}
+
 
 .tour-card {
   flex: none;
@@ -15,35 +7,12 @@
   margin: 0 8px;
 }
 
-.carousel-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-  
+
   .tour-card:hover {
     transform: scale(1.05);
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
   }
-  
-  .carousel-btn {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    background-color: rgba(0, 0, 0, 0.5);
-    color: white;
-    padding: 10px;
-    cursor: pointer;
-    z-index: 10;
-    border-radius: 50%;
-  }
-  
-  #carousel-prev {
-    left: 10px;
-  }
-  
-  #carousel-next {
-    right: 10px;
-  }
+
   
   .navbar {
     transition: background-color 0.3s ease;
@@ -183,6 +152,7 @@
   background: #e0e0e0;
 }
 #calendar {
+  display: block;
   max-width: 900px;
   margin: 0 auto;
 }
@@ -207,4 +177,21 @@
 
 .place-card:hover {
   transform: translateY(-5px);
+}
+.leaflet-marker-icon {
+  transition: transform 0.2s;
+}
+
+.leaflet-marker-icon:hover {
+  transform: scale(1.2);
+}
+.tours-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1rem;
+}
+@media (min-width: 768px) {
+  .tours-grid {
+    grid-template-columns: repeat(3, minmax(320px, 1fr));
+  }
 }

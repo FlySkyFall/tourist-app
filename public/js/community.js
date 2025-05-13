@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
-  const regionFilter = document.getElementById('filter-region'); // Исправлено на filter-region
-  const sortFilter = document.getElementById('sort'); // Исправлено на sort
+  const regionFilter = document.getElementById('filter-region');
+  const sortFilter = document.getElementById('sort');
   const createPostForm = document.getElementById('create-post-form');
 
   // Получить CSRF-токен
@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const updatePosts = () => {
     const region = regionFilter ? regionFilter.value : '';
     const sortBy = sortFilter ? sortFilter.value : 'newest';
-    const url = `/community?region=${encodeURIComponent(region)}&sort=${encodeURIComponent(sortBy)}`; // Исправлено sortBy на sort
+    const url = `/community?region=${encodeURIComponent(region)}&sort=${encodeURIComponent(sortBy)}`;
     window.location.href = url;
   };
 
@@ -69,7 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Лайки
   document.addEventListener('click', async (e) => {
-    const likeButton = e.target.closest('.like-btn'); // Исправлено на like-btn
+    const likeButton = e.target.closest('.like-btn');
     if (likeButton) {
       e.preventDefault();
       const postId = likeButton.dataset.id;
@@ -89,7 +89,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const data = await response.json();
-        const likesCount = likeButton.querySelector('.likes-count') || likeButton; // Поддержка без .likes-count
+        const likesCount = likeButton.querySelector('.likes-count') || likeButton;
         likesCount.textContent = `Лайк (${data.likes})`;
         likeButton.classList.toggle('text-red-600', data.liked);
         likeButton.classList.toggle('text-gray-600', !data.liked);
@@ -100,13 +100,41 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // Показ/скрытие формы комментариев
+  document.addEventListener('click', (e) => {
+    const commentButton = e.target.closest('.comment-btn');
+    if (commentButton) {
+      e.preventDefault();
+      const postId = commentButton.dataset.id;
+      console.log(`Клик на comment-btn для поста: ${postId}`);
+
+      // Находим блок .comments для текущего поста
+      const postElement = commentButton.closest('.post');
+      const commentsBlock = postElement.querySelector('.comments');
+
+      if (!commentsBlock) {
+        console.error(`Блок .comments не найден для поста: ${postId}`);
+        return;
+      }
+
+      // Скрываем все формы комментариев
+      document.querySelectorAll('.comments').forEach((block) => {
+        block.classList.add('hidden');
+      });
+
+      // Показываем форму для текущего поста
+      commentsBlock.classList.remove('hidden');
+      console.log(`Форма комментариев показана для поста: ${postId}`);
+    }
+  });
+
   // Комментарии
   document.addEventListener('submit', async (e) => {
     const commentForm = e.target.closest('.comment-form');
     if (commentForm) {
       e.preventDefault();
-      const postId = commentForm.closest('.post').dataset.id; // Исправлено на получение через .post
-      const commentInput = commentForm.querySelector('textarea[name="content"]'); // Исправлено на textarea
+      const postId = commentForm.closest('.post').dataset.id;
+      const commentInput = commentForm.querySelector('textarea[name="content"]');
       const text = commentInput.value.trim();
 
       if (!text) {
@@ -121,7 +149,7 @@ document.addEventListener('DOMContentLoaded', () => {
             'Content-Type': 'application/json',
             'X-CSRF-Token': getCsrfToken()
           },
-          body: JSON.stringify({ content: text }) // Исправлено на content
+          body: JSON.stringify({ content: text })
         });
 
         if (!response.ok) {

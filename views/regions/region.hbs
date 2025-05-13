@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{region.name}} - Краснодарский край</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
   <link rel="stylesheet" href="/css/style.css">
   <style>
     #regionMap { height: 400px; width: 100%; }
@@ -21,7 +24,13 @@
         <h1 class="text-3xl font-bold mb-6">{{region.name}}</h1>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div>
-            <img src="{{region.images.[0]}}" alt="{{region.name}}" class="w-full h-96 object-cover rounded-lg">
+            {{#if region.images.length}}
+              <img src="{{region.images.[0]}}" alt="{{region.name}}" class="w-full h-96 object-cover rounded-lg">
+            {{else}}
+              <div class="w-full h-96 bg-gray-200 rounded-lg flex items-center justify-center">
+                <span class="text-gray-500">Изображение отсутствует</span>
+              </div>
+            {{/if}}
           </div>
           <div>
             <p class="text-gray-600 mb-4">{{region.description}}</p>
@@ -59,10 +68,16 @@
           <div class="tours-list grid grid-cols-1 md:grid-cols-3 gap-6">
             {{#each tours}}
               <div class="tour-card bg-gray-100 rounded-lg shadow-md overflow-hidden" data-category="{{this.type}}">
-                <img src="{{this.images.[0]}}" alt="{{this.title}}" class="w-full h-48 object-cover">
+                {{#if this.images.length}}
+                  <img src="{{this.images.[0]}}" alt="{{this.title}}" class="w-full h-48 object-cover">
+                {{else}}
+                  <div class="w-full h-48 bg-gray-200 flex items-center justify-center">
+                    <span class="text-gray-500">Изображение отсутствует</span>
+                  </div>
+                {{/if}}
                 <div class="p-4">
                   <h3 class="text-xl font-semibold mb-2">{{this.title}}</h3>
-                  <p class="text-gray-600 mb-2">{{this.description}}</p>
+                  <p class="text-gray-600 mb-2">{{truncate this.description 100}}</p>
                   <p class="text-blue-600 font-bold mb-4">{{this.price}} ₽</p>
                   <a href="/tours/{{this._id}}" class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded">Подробнее</a>
                 </div>
@@ -72,7 +87,19 @@
             {{/each}}
           </div>
 
-          <div class="pagination flex justify-center mt-8"></div>
+          {{#if totalPages}}
+            <div class="pagination flex justify-center mt-8">
+              {{#if (gt currentPage 1)}}
+                <a href="/regions/{{region._id}}?page={{subtract currentPage 1}}&type={{currentType}}" class="px-4 py-2 mx-1 bg-gray-200 rounded">Предыдущая</a>
+              {{/if}}
+              {{#range 1 totalPages}}
+                <a href="/regions/{{region._id}}?page={{this}}&type={{../currentType}}" class="px-4 py-2 mx-1 {{eq this ../currentPage 'bg-blue-600 text-white' 'bg-gray-200'}} rounded">{{this}}</a>
+              {{/range}}
+              {{#if (lt currentPage totalPages)}}
+                <a href="/regions/{{region._id}}?page={{add currentPage 1}}&type={{currentType}}" class="px-4 py-2 mx-1 bg-gray-200 rounded">Следующая</a>
+              {{/if}}
+            </div>
+          {{/if}}
           <p class="text-center text-gray-600 mt-4">Страница: {{currentPage}} из {{totalPages}} (Туров на странице: {{toursOnPage}}, Всего туров: {{totalTours}})</p>
         </div>
       {{/if}}
@@ -81,6 +108,9 @@
 
   {{> footer}}
 
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+  <script src="/js/maps.js"></script>
   <script src="/js/main.js"></script>
   <script>
     window.regionData = {
@@ -92,18 +122,23 @@
     };
     window.attractionsData = [
       {{#each attractions}}
-        {
-          _id: '{{this._id}}',
-          name: '{{this.name}}',
-          location: {
-            coordinates: {
-              lat: {{this.location.coordinates.lat}},
-              lng: {{this.location.coordinates.lng}}
-            }
-          }
-        }{{#unless @last}},{{/unless}}
+        {{#if this._id}}
+          {
+            _id: '{{this._id}}',
+            name: '{{this.name}}',
+            location: {
+              coordinates: {
+                lat: {{this.location.coordinates.coordinates.[1]}},
+                lng: {{this.location.coordinates.coordinates.[0]}}
+              }
+            },
+            distance: {{this.distance}}
+          }{{#unless @last}},{{/unless}}
+        {{/if}}
       {{/each}}
     ];
+    console.log('regionData:', window.regionData);
+    console.log('attractionsData:', window.attractionsData);
   </script>
 </body>
 </html>

@@ -5,6 +5,7 @@ const mongoose = require('mongoose');
 exports.getRegions = async (req, res) => {
   try {
     const regions = await Region.find().lean();
+    console.log('Regions fetched:', regions.map(r => r.name));
     res.render('regions/index', {
       regions,
       error: null,
@@ -62,7 +63,7 @@ exports.getRegionById = async (req) => {
     const totalTours = await Tour.countDocuments(filter);
     const totalPages = Math.ceil(totalTours / limit);
 
-    console.log('Tours found:', tours.length, 'Total tours:', totalTours);
+    console.log('Tours found:', tours.length, 'Total tours:', totalTours, 'Tours:', tours.map(t => t.title));
 
     if (page > totalPages && totalTours > 0) {
       return {
@@ -80,7 +81,6 @@ exports.getRegionById = async (req) => {
       region,
       tours,
       currentPage: page,
-      totalPages,
       totalPages,
       totalTours,
       toursOnPage: tours.length,
@@ -130,10 +130,6 @@ exports.filterRegionTours = async (req, res) => {
     const totalPages = Math.ceil(totalTours / limit);
 
     console.log('Filter tours found:', tours.length, 'Total tours:', totalTours);
-
-    if (page > totalPages && totalTours > 0) {
-      return res.status(404).json({ error: 'Такой страницы не существует' });
-    }
 
     res.json({
       tours,

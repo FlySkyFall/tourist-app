@@ -6,13 +6,16 @@ const attractionSchema = new mongoose.Schema({
   location: {
     region: { type: String, required: true },
     coordinates: {
-      lat: { type: Number, required: true },
-      lng: { type: Number, required: true },
+      type: { type: String, enum: ['Point'], default: 'Point' },
+      coordinates: { type: [Number], required: true } // [lng, lat]
     },
   },
   category: { type: String, enum: ['historical', 'natural', 'cultural', 'other'], required: true },
   images: [String],
   website: { type: String },
 });
+
+// Создание 2dsphere индекса для геопространственных запросов
+attractionSchema.index({ 'location.coordinates': '2dsphere' });
 
 module.exports = mongoose.model('Attraction', attractionSchema);

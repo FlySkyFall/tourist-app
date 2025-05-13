@@ -3,7 +3,6 @@ const Region = require('../models/Region');
 const Booking = require('../models/Booking');
 const mongoose = require('mongoose');
 
-
 exports.getTours = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -11,7 +10,6 @@ exports.getTours = async (req, res) => {
     const skip = (page - 1) * limit;
     const type = req.query.type || 'all';
     const search = req.query.search ? req.query.search.trim() : '';
-    // Декодируем параметр region
     const region = req.query.region ? decodeURIComponent(req.query.region).trim() : '';
     const minPrice = req.query.minPrice ? parseInt(req.query.minPrice) : '';
     const maxPrice = req.query.maxPrice ? parseInt(req.query.maxPrice) : '';
@@ -56,7 +54,6 @@ exports.getTours = async (req, res) => {
       ];
     }
     if (region) {
-      // Проверяем существование региона
       const regionExists = await Region.findOne({ name: region }).lean();
       if (!regionExists) {
         console.log(`Region "${region}" not found in Region collection`);
@@ -89,14 +86,12 @@ exports.getTours = async (req, res) => {
     if (maxPrice) {
       query.price = { ...query.price, $lte: maxPrice };
     }
-    if (startDate || endDate) {
-      query.$and = query.$and || [];
-      if (startDate) {
-        query.$and.push({ 'season.end': { $gte: startDate } });
-      }
-      if (endDate) {
-        query.$and.push({ 'season.start': { $lte: endDate } });
-      }
+    // Исправленная логика для фильтрации по сезону
+    if (startDate && !isNaN(startDate)) {
+      query['season.start'] = { $lte: startDate };
+    }
+    if (endDate && !isNaN(endDate)) {
+      query['season.end'] = { $gte: endDate };
     }
     if (minDuration) {
       query.durationDays = { ...query.durationDays, $gte: minDuration };
@@ -200,7 +195,6 @@ exports.filterTours = async (req, res) => {
     const skip = (page - 1) * limit;
     const type = req.query.type || 'all';
     let search = req.query.search ? decodeURIComponent(req.query.search).trim() : '';
-    // Декодируем параметр region
     const region = req.query.region ? decodeURIComponent(req.query.region).trim() : '';
     const minPrice = req.query.minPrice ? parseInt(req.query.minPrice) : '';
     const maxPrice = req.query.maxPrice ? parseInt(req.query.maxPrice) : '';
@@ -245,7 +239,6 @@ exports.filterTours = async (req, res) => {
       ];
     }
     if (region) {
-      // Проверяем существование региона
       const regionExists = await Region.findOne({ name: region }).lean();
       if (!regionExists) {
         console.log(`Region "${region}" not found in Region collection`);
@@ -259,14 +252,12 @@ exports.filterTours = async (req, res) => {
     if (maxPrice) {
       query.price = { ...query.price, $lte: maxPrice };
     }
-    if (startDate || endDate) {
-      query.$and = query.$and || [];
-      if (startDate) {
-        query.$and.push({ 'season.end': { $gte: startDate } });
-      }
-      if (endDate) {
-        query.$and.push({ 'season.start': { $lte: endDate } });
-      }
+    // Исправленная логика для фильтрации по сезону
+    if (startDate && !isNaN(startDate)) {
+      query['season.start'] = { $lte: startDate };
+    }
+    if (endDate && !isNaN(endDate)) {
+      query['season.end'] = { $gte: endDate };
     }
     if (minDuration) {
       query.durationDays = { ...query.durationDays, $gte: minDuration };
@@ -312,7 +303,6 @@ exports.filterTours = async (req, res) => {
 };
 
 // Остальные методы остаются без изменений
-
 exports.getTourById = async (req, res) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
@@ -323,10 +313,17 @@ exports.getTourById = async (req, res) => {
       return res.status(404).render('error', { message: 'Тур не найден' });
     }
     const hasReviewed = req.user ? tour.reviews.some(review => review.userId._id.toString() === req.user._id.toString()) : false;
+    const hasActiveBooking = req.user
+      ? await Booking.exists({
+          userId: req.user._id,
+          status: { $in: ['pending', 'confirmed'] }
+        })
+      : false;
     res.render('tours/tour', {
       tour,
       user: req.user || null,
       hasReviewed,
+      hasActiveBooking,
       seasonStart: tour.season.start.toISOString().split('T')[0],
       seasonEnd: tour.season.end.toISOString().split('T')[0],
       error: null,
@@ -338,7 +335,6 @@ exports.getTourById = async (req, res) => {
   }
 };
 
-// Остальные методы остаются без изменений
 exports.getTourAvailability = async (req, res) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {

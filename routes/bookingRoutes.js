@@ -29,5 +29,6 @@ router.post('/:id/pay', authMiddleware, async (req, res, next) => {
 router.get('/', authMiddleware, bookingController.getUserBookings);
 router.post('/:id/cancel', authMiddleware, bookingController.cancelBooking);
 router.post('/clean-expired', bookingController.cleanExpiredBookings);
+router.get('/tours/:id/availability', bookingController.getTourAvailability);
 
 module.exports = router;
