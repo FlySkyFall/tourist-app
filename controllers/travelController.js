@@ -42,15 +42,26 @@ exports.getPlacePage = async (req, res) => {
   try {
     const placeId = req.params.id;
     let place = await Hotel.findById(placeId).lean();
-    if (!place) {
+    let category = null;
+    if (place) {
+      category = 'hotel';
+    } else {
       place = await Attraction.findById(placeId).lean();
-    }
-    if (!place) {
-      place = await Restaurant.findById(placeId).lean();
+      if (place) {
+        category = 'attraction';
+      } else {
+        place = await Restaurant.findById(placeId).lean();
+        if (place) {
+          category = 'restaurant';
+        }
+      }
     }
     if (!place) {
       return res.status(404).render('error', { message: 'Место не найдено' });
     }
+    // Добавляем поле category в объект place
+    place.category = category;
+    console.log('Place loaded:', { id: placeId, name: place.name, category });
     res.render('travels/place', {
       place,
       user: req.user || null,

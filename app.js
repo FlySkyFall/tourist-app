@@ -12,7 +12,7 @@ const cookieParser = require('cookie-parser');
 const Achievement = require('./models/Achievement');
 const http = require('http');
 const { Server } = require('socket.io');
-const multer = require('multer'); // Добавляем multer
+const multer = require('multer');
 
 // Загрузка переменных окружения
 dotenv.config();
@@ -24,7 +24,6 @@ const io = new Server(server);
 
 // Настройка multer для обработки FormData (без загрузки файлов)
 const upload = multer();
-
 
 // Подключение к MongoDB
 const connectDB = require('./config/db');
@@ -277,11 +276,14 @@ app.use('/community', require('./routes/community'));
 app.use((err, req, res, next) => {
   if (err.code === 'EBADCSRFTOKEN') {
     console.error('CSRF token validation failed:', { path: req.path, method: req.method });
-    return res.status(403).json({ error: 'Недействительный CSRF-токен' });
+    req.flash('error', 'Недействительный CSRF-токен');
+    return res.redirect(req.path); // Редирект на ту же страницу с сообщением
   }
   console.error(err.stack);
-  res.status(500).render('error', { message: 'Что-то пошло не так!' });
+  req.flash('error', 'Что-то пошло не так!');
+  res.redirect('/admin');
 });
+
 
 // Запуск сервера
 const PORT = process.env.PORT || 3000;

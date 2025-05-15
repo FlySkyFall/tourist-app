@@ -109,5 +109,6 @@ router.post(
 // Управление постами сообщества
 router.get('/posts', authMiddleware, adminMiddleware, adminController.getPosts);
 router.post('/posts/:id/toggle', authMiddleware, adminMiddleware, adminController.togglePostVisibility);
+router.post('/posts/:id/delete', authMiddleware, adminMiddleware, adminController.deletePost);
 
 module.exports = router;

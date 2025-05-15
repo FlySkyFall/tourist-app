@@ -401,3 +401,26 @@ exports.togglePostVisibility = async (req, res) => {
     res.redirect('/admin/posts');
   }
 };
+
+exports.deletePost = async (req, res) => {
+  try {
+    const postId = req.params.id;
+    console.log('Deleting post with ID:', postId);
+    if (!mongoose.Types.ObjectId.isValid(postId)) {
+      req.flash('error', 'Неверный идентификатор поста');
+      return res.redirect('/admin/posts');
+    }
+    const post = await Post.findById(postId);
+    if (!post) {
+      req.flash('error', 'Пост не найден');
+      return res.redirect('/admin/posts');
+    }
+    await post.deleteOne();
+    req.flash('success', 'Пост успешно удалён');
+    res.redirect('/admin/posts');
+  } catch (error) {
+    console.error('Error in deletePost:', error.message, error.stack);
+    req.flash('error', 'Ошибка удаления поста');
+    res.redirect('/admin/posts');
+  }
+};

@@ -18,9 +18,10 @@
           <img src="{{place.images.[0]}}" alt="{{place.name}}" class="w-full h-96 object-cover rounded-lg mb-6" onerror="this.src='/img/placeholder.jpg'">
           <p class="text-gray-600 mb-4">{{place.description}}</p>
           <p class="text-gray-500 mb-4"><strong>Категория:</strong> 
-            {{#if (contains place 'rating')}}Отель
-            {{else if (contains place 'category')}}Достопримечательность
-            {{else}}Ресторан{{/if}}
+            {{#if (eq place.category 'hotel')}}Отель
+            {{else if (eq place.category 'attraction')}}Достопримечательность
+            {{else if (eq place.category 'restaurant')}}Ресторан
+            {{else}}Неизвестная категория{{/if}}
           </p>
           {{#if place.location.region}}
             <p class="text-gray-500 mb-4"><strong>Местоположение:</strong> {{place.location.region}}</p>

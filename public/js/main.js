@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const toursList = document.querySelector('.tours-grid');
   const pagination = document.querySelector('.pagination');
   const pageInfo = document.querySelector('.pagination + p');
-
+  
   const fetchTours = async (type = 'all', page = 1) => {
     if (toursList) {
       toursList.innerHTML = '<p class="text-center text-gray-600">Загрузка...</p>';

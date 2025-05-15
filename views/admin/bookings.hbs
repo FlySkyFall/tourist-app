@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="csrf-token" content="{{csrfToken}}">
   <title>Управление бронированиями</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <link rel="stylesheet" href="/css/style.css">
@@ -36,12 +35,12 @@
                 <div class="flex gap-4">
                   {{#if (eq this.status 'pending')}}
                     <form action="/admin/bookings/{{this._id}}/confirm" method="POST">
-                      <input type="hidden" name="_csrf" value="{{csrfToken}}">
+                      <input type="hidden" name="_csrf" value="{{../csrfToken}}">
                       <button type="submit" class="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded">Подтвердить</button>
                     </form>
                   {{/if}}
                   <form action="/admin/bookings/{{this._id}}/cancel" method="POST">
-                    <input type="hidden" name="_csrf" value="{{csrfToken}}">
+                    <input type="hidden" name="_csrf" value="{{../csrfToken}}">
                     <button type="submit" class="bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded">Отменить</button>
                   </form>
                 </div>
