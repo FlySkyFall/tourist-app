@@ -1,6 +1,7 @@
 const Tour = require('../models/Tour');
 const Region = require('../models/Region');
 const Booking = require('../models/Booking');
+const HotelAvailability = require('../models/HotelAvailability');
 const mongoose = require('mongoose');
 
 exports.getTours = async (req, res) => {
@@ -86,7 +87,6 @@ exports.getTours = async (req, res) => {
     if (maxPrice) {
       query.price = { ...query.price, $lte: maxPrice };
     }
-    // Исправленная логика для фильтрации по сезону
     if (startDate && !isNaN(startDate)) {
       query['season.start'] = { $lte: startDate };
     }
@@ -252,7 +252,6 @@ exports.filterTours = async (req, res) => {
     if (maxPrice) {
       query.price = { ...query.price, $lte: maxPrice };
     }
-    // Исправленная логика для фильтрации по сезону
     if (startDate && !isNaN(startDate)) {
       query['season.start'] = { $lte: startDate };
     }
@@ -302,7 +301,6 @@ exports.filterTours = async (req, res) => {
   }
 };
 
-// Остальные методы остаются без изменений
 exports.getTourById = async (req, res) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
@@ -312,6 +310,11 @@ exports.getTourById = async (req, res) => {
     if (!tour) {
       return res.status(404).render('error', { message: 'Тур не найден' });
     }
+    const roomTypeLabels = {
+      standard: 'Обычный',
+      standardWithAC: 'Обычный с кондиционером',
+      luxury: 'Люкс',
+    };
     const hasReviewed = req.user ? tour.reviews.some(review => review.userId._id.toString() === req.user._id.toString()) : false;
     const hasActiveBooking = req.user
       ? await Booking.exists({
@@ -322,6 +325,7 @@ exports.getTourById = async (req, res) => {
     res.render('tours/tour', {
       tour,
       user: req.user || null,
+      roomTypeLabels,
       hasReviewed,
       hasActiveBooking,
       seasonStart: tour.season.start.toISOString().split('T')[0],
@@ -340,7 +344,7 @@ exports.getTourAvailability = async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
       return res.status(404).json({ error: 'Неверный идентификатор тура' });
     }
-    const tour = await Tour.findById(req.params.id).select('type season minGroupSize maxGroupSize hotelCapacity durationDays');
+    const tour = await Tour.findById(req.params.id).populate('accommodation.hotel');
     if (!tour) {
       return res.status(404).json({ error: 'Тур не найден' });
     }
@@ -348,56 +352,61 @@ exports.getTourAvailability = async (req, res) => {
     const { type, season, minGroupSize, maxGroupSize, hotelCapacity, durationDays } = tour;
     const startDate = new Date(season.start);
     const endDate = new Date(season.end);
-    const currentDate = new Date();
-    const availability = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-    const bookings = await Booking.find({
-      tourId: tour._id,
-      status: { $in: ['confirmed', 'pending'] },
-      tourDate: { $gte: startDate, $lte: endDate },
-    }).lean();
+    const events = [];
+    if (['passive', 'health'].includes(type) && tour.accommodation.hotel) {
+      const availabilities = await HotelAvailability.find({
+        hotelId: tour.accommodation.hotel._id,
+        date: { $gte: today, $lte: endDate },
+      });
 
-    const bookingsByDate = bookings.reduce((acc, booking) => {
-      const tourDate = new Date(booking.tourDate);
-      const tourEndDate = new Date(tourDate);
-      tourEndDate.setDate(tourEndDate.getDate() + durationDays);
-      if (tourEndDate > currentDate) {
-        if (['passive', 'health'].includes(type)) {
-          for (let i = 0; i < durationDays; i++) {
-            const currentTourDate = new Date(tourDate);
-            currentTourDate.setDate(tourDate.getDate() + i);
-            if (currentTourDate >= startDate && currentTourDate <= endDate) {
-              const dateStr = currentTourDate.toISOString().split('T')[0];
-              acc[dateStr] = (acc[dateStr] || 0) + booking.participants;
-            }
-          }
+      for (let d = new Date(startDate > today ? startDate : today); d <= endDate; d.setDate(d.getDate() + 1)) {
+        const date = new Date(d.setHours(0, 0, 0, 0));
+        let availableSlots = hotelCapacity;
+
+        const availability = availabilities.find(a => a.date.getTime() === date.getTime());
+        if (availability) {
+          availableSlots = availability.availableSlots;
         } else {
-          const dateStr = tourDate.toISOString().split('T')[0];
-          acc[dateStr] = (acc[dateStr] || 0) + booking.participants;
+          const newAvailability = new HotelAvailability({
+            hotelId: tour.accommodation.hotel._id,
+            date,
+            availableSlots: hotelCapacity,
+          });
+          await newAvailability.save();
+          availableSlots = hotelCapacity;
         }
-      }
-      return acc;
-    }, {});
 
-    if (['passive', 'health'].includes(type)) {
-      for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-        const dateStr = d.toISOString().split('T')[0];
-        const bookedParticipants = bookingsByDate[dateStr] || 0;
-        const availableSlots = hotelCapacity - bookedParticipants;
-        availability.push({
-          start: dateStr,
+        events.push({
+          start: date.toISOString().split('T')[0],
           title: availableSlots >= minGroupSize ? `Доступно: ${availableSlots}` : 'Недоступно',
           color: availableSlots >= minGroupSize ? '#28a745' : '#dc3545',
           availableSlots,
         });
       }
-    } else if (['active', 'camping', 'excursion'].includes(type)) {
-      for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + durationDays)) {
-        const dateStr = d.toISOString().split('T')[0];
-        const bookedParticipants = bookingsByDate[dateStr] || 0;
-        const availableSlots = maxGroupSize - bookedParticipants;
-        availability.push({
-          start: dateStr,
+    } else {
+      const bookings = await Booking.find({
+        tourId: tour._id,
+        status: 'confirmed',
+        startDate: { $gte: today, $lte: endDate },
+      });
+
+      for (let d = new Date(startDate > today ? startDate : today); d <= endDate; d.setDate(d.getDate() + 1)) {
+        const date = new Date(d.setHours(0, 0, 0, 0));
+        const bookedSlots = bookings
+          .filter(b => {
+            const tourStart = new Date(b.startDate).setHours(0, 0, 0, 0);
+            const tourEnd = new Date(tourStart);
+            tourEnd.setDate(tourEnd.getDate() + durationDays - 1);
+            return date >= tourStart && date <= tourEnd;
+          })
+          .reduce((sum, b) => sum + b.participants, 0);
+
+        const availableSlots = maxGroupSize - bookedSlots;
+        events.push({
+          start: date.toISOString().split('T')[0],
           title: availableSlots >= minGroupSize ? `Доступно: ${availableSlots}` : 'Недоступно',
           color: availableSlots >= minGroupSize ? '#28a745' : '#dc3545',
           availableSlots,
@@ -405,18 +414,15 @@ exports.getTourAvailability = async (req, res) => {
       }
     }
 
-    res.json(availability);
+    return res.status(200).json(events);
   } catch (error) {
-    console.error('Ошибка в getTourAvailability:', error.message);
-    res.status(500).json({ error: 'Ошибка получения доступности' });
+    console.error('Error in getTourAvailability:', error.message, error.stack);
+    return res.status(500).json({ error: `Ошибка получения доступности: ${error.message}` });
   }
 };
 
 exports.addReview = async (req, res) => {
   try {
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return res.status(404).render('error', { message: 'Неверный идентификатор тура' });
-    }
     const tour = await Tour.findById(req.params.id);
     if (!tour) {
       return res.status(404).render('error', { message: 'Тур не найден' });
@@ -427,6 +433,8 @@ exports.addReview = async (req, res) => {
         tour: tour.toObject(),
         user: req.user || null,
         hasReviewed: true,
+        seasonStart: tour.season.start.toISOString().split('T')[0],
+        seasonEnd: tour.season.end.toISOString().split('T')[0],
         error: 'Вы уже оставили отзыв для этого тура',
       });
     }
@@ -444,6 +452,8 @@ exports.addReview = async (req, res) => {
       tour: tour ? tour.toObject() : null,
       user: req.user || null,
       hasReviewed: false,
+      seasonStart: tour ? tour.season.start.toISOString().split('T')[0] : '',
+      seasonEnd: tour ? tour.season.end.toISOString().split('T')[0] : '',
       error: 'Ошибка добавления отзыва',
     });
   }

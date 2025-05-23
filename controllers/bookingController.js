@@ -1,7 +1,8 @@
 const Booking = require('../models/Booking');
 const Tour = require('../models/Tour');
+const Hotel = require('../models/Hotel');
 const User = require('../models/User');
-const Availability = require('../models/Availability');
+const HotelAvailability = require('../models/HotelAvailability');
 const mongoose = require('mongoose');
 
 exports.createBooking = async (req, res) => {
@@ -10,74 +11,161 @@ exports.createBooking = async (req, res) => {
       return res.status(401).json({ error: 'Требуется авторизация' });
     }
 
-    const { tourId, tourDate, participants } = req.body;
+    const { tourId, hotelId, startDate, endDate, participants, roomType } = req.body;
 
-    if (!mongoose.Types.ObjectId.isValid(tourId)) {
-      return res.status(400).json({ error: 'Неверный идентификатор тура' });
+    if (!tourId && !hotelId) {
+      return res.status(400).json({ error: 'Не указан tourId или hotelId' });
     }
 
-    if (!tourDate) {
-      return res.status(400).json({ error: 'Дата проведения тура обязательна' });
+    if (!mongoose.Types.ObjectId.isValid(tourId || hotelId)) {
+      return res.status(400).json({ error: 'Неверный идентификатор тура или отеля' });
+    }
+
+    if (!startDate) {
+      return res.status(400).json({ error: 'Дата начала обязательна' });
     }
 
     if (!participants || participants < 1) {
       return res.status(400).json({ error: 'Количество участников должно быть больше 0' });
     }
 
-    const tour = await Tour.findById(tourId);
-    if (!tour) {
-      return res.status(404).json({ error: 'Тур не найден' });
-    }
+    const selectedDate = new Date(startDate);
+    let bookingData = {
+      userId: req.user._id,
+      bookingDate: new Date(),
+      startDate: selectedDate,
+      participants,
+      status: 'pending',
+      paymentStatus: 'pending',
+    };
 
-    const selectedDate = new Date(tourDate);
-    const seasonStart = new Date(tour.season.start);
-    const seasonEnd = new Date(tour.season.end);
+    if (tourId) {
+      const tour = await Tour.findById(tourId).populate('accommodation.hotel');
+      if (!tour) {
+        return res.status(404).json({ error: 'Тур не найден' });
+      }
 
-    if (selectedDate < seasonStart || selectedDate > seasonEnd) {
-      return res.status(400).json({ 
-        error: `Дата должна быть в пределах сезона: с ${seasonStart.toLocaleDateString('ru-RU')} по ${seasonEnd.toLocaleDateString('ru-RU')}` 
-      });
-    }
+      // Проверка roomType для туров с отелем или санаторием
+      if (['hotel', 'sanatorium'].includes(tour.accommodation.type)) {
+        if (!roomType || !['standard', 'standardWithAC', 'luxury'].includes(roomType)) {
+          return res.status(400).json({ error: 'Необходимо выбрать тип номера: обычный, обычный с кондиционером или люкс' });
+        }
+        if (tour.accommodation.hotel && !tour.accommodation.hotel.roomTypes.includes(roomType)) {
+          return res.status(400).json({ error: `Тип номера "${roomType}" недоступен для этого отеля` });
+        }
+      } else if (roomType) {
+        return res.status(400).json({ error: 'Тип номера не требуется для этого типа размещения' });
+      }
 
-    const maxCapacity = ['passive', 'health'].includes(tour.type) ? tour.hotelCapacity : tour.maxGroupSize;
-    if (participants > maxCapacity) {
-      return res.status(400).json({ 
-        error: `Количество участников не может превышать ${maxCapacity}` 
-      });
-    }
+      const seasonStart = new Date(tour.season.start);
+      const seasonEnd = new Date(tour.season.end);
 
-    // Проверка доступных мест для всех дней тура
-    const tourDates = [];
-    for (let i = 0; i < tour.durationDays; i++) {
-      const date = new Date(selectedDate);
-      date.setDate(selectedDate.getDate() + i);
-      tourDates.push(date);
-    }
-
-    const availabilities = await Availability.find({
-      tourId,
-      date: { $in: tourDates.map(d => new Date(d.setHours(0, 0, 0, 0))) },
-    });
-
-    // Инициализация доступности, если записи отсутствуют
-    const missingDates = tourDates.filter(d => !availabilities.find(a => a.date.getTime() === new Date(d.setHours(0, 0, 0, 0)).getTime()));
-    for (const date of missingDates) {
-      const newAvailability = new Availability({
-        tourId,
-        date: new Date(date.setHours(0, 0, 0, 0)),
-        availableSlots: maxCapacity,
-      });
-      await newAvailability.save();
-      availabilities.push(newAvailability);
-    }
-
-    // Проверка, что на все даты достаточно мест
-    for (const availability of availabilities) {
-      if (availability.availableSlots < participants) {
+      if (selectedDate < seasonStart || selectedDate > seasonEnd) {
         return res.status(400).json({ 
-          error: `Недостаточно мест на ${new Date(availability.date).toLocaleDateString('ru-RU')}: доступно ${availability.availableSlots}` 
+          error: `Дата должна быть в пределах сезона: с ${seasonStart.toLocaleDateString('ru-RU')} по ${seasonEnd.toLocaleDateString('ru-RU')}` 
         });
       }
+
+      const maxCapacity = ['passive', 'health'].includes(tour.type) ? tour.hotelCapacity : tour.maxGroupSize;
+      if (participants > maxCapacity) {
+        return res.status(400).json({ 
+          error: `Количество участников не может превышать ${maxCapacity}` 
+        });
+      }
+
+      const tourDates = [];
+      for (let i = 0; i < tour.durationDays; i++) {
+        const date = new Date(selectedDate);
+        date.setDate(selectedDate.getDate() + i);
+        tourDates.push(date);
+      }
+
+      // Проверка доступности для тура
+      const availabilities = await HotelAvailability.find({
+        hotelId: tour.accommodation.hotel?._id,
+        date: { $in: tourDates.map(d => new Date(d.setHours(0, 0, 0, 0))) },
+      });
+
+      const missingDates = tourDates.filter(d => !availabilities.find(a => a.date.getTime() === new Date(d.setHours(0, 0, 0, 0)).getTime()));
+      for (const date of missingDates) {
+        const newAvailability = new HotelAvailability({
+          hotelId: tour.accommodation.hotel?._id,
+          date: new Date(date.setHours(0, 0, 0, 0)),
+          availableSlots: tour.accommodation.hotel?.capacity || maxCapacity,
+        });
+        await newAvailability.save();
+        availabilities.push(newAvailability);
+      }
+
+      for (const availability of availabilities) {
+        if (availability.availableSlots < participants) {
+          return res.status(400).json({ 
+            error: `Недостаточно мест на ${new Date(availability.date).toLocaleDateString('ru-RU')}: доступно ${availability.availableSlots}` 
+          });
+        }
+      }
+
+      bookingData.tourId = tourId;
+      bookingData.roomType = ['hotel', 'sanatorium'].includes(tour.accommodation.type) ? roomType : undefined;
+    } else if (hotelId) {
+      const hotel = await Hotel.findById(hotelId);
+      if (!hotel) {
+        return res.status(404).json({ error: 'Отель не найден' });
+      }
+
+      if (!endDate) {
+        return res.status(400).json({ error: 'Дата окончания обязательна для бронирования отеля' });
+      }
+
+      if (!roomType || !['standard', 'standardWithAC', 'luxury'].includes(roomType)) {
+        return res.status(400).json({ error: 'Необходимо выбрать тип номера: обычный, обычный с кондиционером или люкс' });
+      }
+
+      if (!hotel.roomTypes.includes(roomType)) {
+        return res.status(400).json({ error: `Тип номера "${roomType}" недоступен для этого отеля` });
+      }
+
+      const endDateObj = new Date(endDate);
+      if (endDateObj <= selectedDate) {
+        return res.status(400).json({ error: 'Дата выезда должна быть позже даты заезда' });
+      }
+
+      if (participants > hotel.capacity) {
+        return res.status(400).json({ error: `Количество гостей не может превышать ${hotel.capacity}` });
+      }
+
+      const hotelDates = [];
+      for (let d = new Date(selectedDate); d <= endDateObj; d.setDate(d.getDate() + 1)) {
+        hotelDates.push(new Date(d.setHours(0, 0, 0, 0)));
+      }
+
+      const availabilities = await HotelAvailability.find({
+        hotelId,
+        date: { $in: hotelDates },
+      });
+
+      const missingDates = hotelDates.filter(d => !availabilities.find(a => a.date.getTime() === d.getTime()));
+      for (const date of missingDates) {
+        const newAvailability = new HotelAvailability({
+          hotelId,
+          date,
+          availableSlots: hotel.capacity,
+        });
+        await newAvailability.save();
+        availabilities.push(newAvailability);
+      }
+
+      for (const availability of availabilities) {
+        if (availability.availableSlots < participants) {
+          return res.status(400).json({ 
+            error: `Недостаточно мест на ${new Date(availability.date).toLocaleDateString('ru-RU')}: доступно ${availability.availableSlots}` 
+          });
+        }
+      }
+
+      bookingData.hotelId = hotelId;
+      bookingData.endDate = endDateObj;
+      bookingData.roomType = roomType;
     }
 
     const activeBooking = await Booking.findOne({
@@ -88,27 +176,21 @@ exports.createBooking = async (req, res) => {
       return res.status(400).json({ error: 'У вас уже есть активное бронирование' });
     }
 
-    const booking = new Booking({
-      userId: req.user._id,
-      tourId,
-      bookingDate: new Date(),
-      tourDate: selectedDate,
-      participants,
-      status: 'pending',
-      paymentStatus: 'pending',
-    });
-
+    const booking = new Booking(bookingData);
     await booking.save();
 
     await User.findByIdAndUpdate(req.user._id, {
       $push: {
         bookings: {
           _id: booking._id,
-          tourId,
+          tourId: booking.tourId || undefined,
+          hotelId: booking.hotelId || undefined,
           bookingDate: new Date(),
-          tourDate: selectedDate,
+          startDate: selectedDate,
+          endDate: booking.endDate,
           status: 'pending',
           participants,
+          roomType: booking.roomType,
           paymentStatus: 'pending',
         },
       },
@@ -121,6 +203,35 @@ exports.createBooking = async (req, res) => {
   } catch (error) {
     console.error('Error in createBooking:', error.message, error.stack);
     return res.status(500).json({ error: `Ошибка бронирования: ${error.message}` });
+  }
+};
+
+exports.getUserBookings = async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Требуется авторизация' });
+    }
+
+    const bookings = await Booking.find({ userId: req.user._id })
+      .populate('tourId', 'title accommodation')
+      .populate('hotelId', 'name')
+      .lean();
+
+    console.log('Fetched bookings:', bookings.map(b => ({ _id: b._id, tourId: b.tourId, hotelId: b.hotelId, status: b.status, paymentStatus: b.paymentStatus, roomType: b.roomType })));
+
+    const invalidBookings = bookings.filter(b => !mongoose.Types.ObjectId.isValid(b._id));
+    if (invalidBookings.length > 0) {
+      console.warn('Invalid booking IDs found:', invalidBookings);
+    }
+
+    res.render('booking/list', {
+      bookings,
+      user: req.user,
+      message: req.flash('success') || req.flash('error'),
+    });
+  } catch (error) {
+    console.error('Error in getUserBookings:', error.message, error.stack);
+    return res.status(500).json({ error: `Ошибка загрузки бронирований: ${error.message}` });
   }
 };
 
@@ -144,7 +255,6 @@ exports.processPayment = async (req, res) => {
 
     const { cardNumber, cardHolder, expiry, cvv } = req.body;
 
-    // Валидация данных карты
     if (cardNumber.length !== 16 || !/^\d+$/.test(cardNumber)) {
       return res.status(400).json({ error: 'Некорректный номер карты' });
     }
@@ -158,17 +268,13 @@ exports.processPayment = async (req, res) => {
       return res.status(400).json({ error: 'Некорректный CVV' });
     }
 
-    const booking = await Booking.findOne({ _id: bookingId, userId: req.user._id });
+    const booking = await Booking.findOne({ _id: bookingId, userId: req.user._id })
+      .populate('tourId')
+      .populate('hotelId');
     if (!booking) {
       return res.status(404).json({ error: 'Бронирование не найдено или не принадлежит вам' });
     }
 
-    const tour = await Tour.findById(booking.tourId);
-    if (!tour) {
-      return res.status(404).json({ error: 'Тур не найден' });
-    }
-
-    // Имитация обработки платежа (10% шанс отклонения)
     const isPaymentSuccessful = Math.random() > 0.1;
 
     if (isPaymentSuccessful) {
@@ -176,18 +282,30 @@ exports.processPayment = async (req, res) => {
       booking.status = 'confirmed';
       await booking.save();
 
-      // Уменьшение доступных мест для всех дней тура
-      const tourDates = [];
-      for (let i = 0; i < tour.durationDays; i++) {
-        const date = new Date(booking.tourDate);
-        date.setDate(booking.tourDate.getDate() + i);
-        tourDates.push(new Date(date.setHours(0, 0, 0, 0)));
-      }
+      if (booking.tourId) {
+        const tour = await Tour.findById(booking.tourId);
+        const tourDates = [];
+        for (let i = 0; i < tour.durationDays; i++) {
+          const date = new Date(booking.startDate);
+          date.setDate(booking.startDate.getDate() + i);
+          tourDates.push(new Date(date.setHours(0, 0, 0, 0)));
+        }
 
-      await Availability.updateMany(
-        { tourId: tour._id, date: { $in: tourDates } },
-        { $inc: { availableSlots: -booking.participants } }
-      );
+        await HotelAvailability.updateMany(
+          { hotelId: tour.accommodation.hotel?._id, date: { $in: tourDates } },
+          { $inc: { availableSlots: -booking.participants } }
+        );
+      } else if (booking.hotelId) {
+        const hotelDates = [];
+        for (let d = new Date(booking.startDate); d <= new Date(booking.endDate); d.setDate(d.getDate() + 1)) {
+          hotelDates.push(new Date(d.setHours(0, 0, 0, 0)));
+        }
+
+        await HotelAvailability.updateMany(
+          { hotelId: booking.hotelId, date: { $in: hotelDates } },
+          { $inc: { availableSlots: -booking.participants } }
+        );
+      }
 
       await User.updateOne(
         { _id: req.user._id, 'bookings._id': bookingId },
@@ -232,7 +350,9 @@ exports.cancelBooking = async (req, res) => {
       return res.status(400).json({ error: 'Неверный идентификатор бронирования' });
     }
 
-    const booking = await Booking.findOne({ _id: bookingId, userId: req.user._id });
+    const booking = await Booking.findOne({ _id: bookingId, userId: req.user._id })
+      .populate('tourId')
+      .populate('hotelId');
     if (!booking) {
       console.log('Booking not found or not owned by user:', { bookingId, userId: req.user._id });
       return res.status(404).json({ error: 'Бронирование не найдено или не принадлежит вам' });
@@ -244,20 +364,31 @@ exports.cancelBooking = async (req, res) => {
 
     console.log('Found booking:', booking);
 
-    // Восстановление доступных мест, если бронирование было оплачено
     if (booking.paymentStatus === 'completed') {
-      const tour = await Tour.findById(booking.tourId);
-      const tourDates = [];
-      for (let i = 0; i < tour.durationDays; i++) {
-        const date = new Date(booking.tourDate);
-        date.setDate(booking.tourDate.getDate() + i);
-        tourDates.push(new Date(date.setHours(0, 0, 0, 0)));
-      }
+      if (booking.tourId) {
+        const tour = await Tour.findById(booking.tourId);
+        const tourDates = [];
+        for (let i = 0; i < tour.durationDays; i++) {
+          const date = new Date(booking.startDate);
+          date.setDate(booking.startDate.getDate() + i);
+          tourDates.push(new Date(date.setHours(0, 0, 0, 0)));
+        }
 
-      await Availability.updateMany(
-        { tourId: tour._id, date: { $in: tourDates } },
-        { $inc: { availableSlots: booking.participants } }
-      );
+        await HotelAvailability.updateMany(
+          { hotelId: tour.accommodation.hotel?._id, date: { $in: tourDates } },
+          { $inc: { availableSlots: booking.participants } }
+        );
+      } else if (booking.hotelId) {
+        const hotelDates = [];
+        for (let d = new Date(booking.startDate); d <= new Date(booking.endDate); d.setDate(d.getDate() + 1)) {
+          hotelDates.push(new Date(d.setHours(0, 0, 0, 0)));
+        }
+
+        await HotelAvailability.updateMany(
+          { hotelId: booking.hotelId, date: { $in: hotelDates } },
+          { $inc: { availableSlots: booking.participants } }
+        );
+      }
     }
 
     booking.status = 'cancelled';
@@ -281,88 +412,58 @@ exports.cancelBooking = async (req, res) => {
   }
 };
 
-exports.getTourAvailability = async (req, res) => {
+exports.getHotelAvailability = async (req, res) => {
   try {
-    const tourId = req.params.id;
-    if (!mongoose.Types.ObjectId.isValid(tourId)) {
-      return res.status(400).json({ error: 'Неверный идентификатор тура' });
+    const hotelId = req.params.id;
+    if (!mongoose.Types.ObjectId.isValid(hotelId)) {
+      return res.status(400).json({ error: 'Неверный идентификатор отеля' });
     }
 
-    const tour = await Tour.findById(tourId);
-    if (!tour) {
-      return res.status(404).json({ error: 'Тур не найден' });
+    const hotel = await Hotel.findById(hotelId);
+    if (!hotel) {
+      return res.status(404).json({ error: 'Отель не найден' });
     }
 
-    const maxCapacity = ['passive', 'health'].includes(tour.type) ? tour.hotelCapacity : tour.maxGroupSize;
-    const seasonStart = new Date(tour.season.start);
-    const seasonEnd = new Date(tour.season.end);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const endDate = new Date(today);
+    endDate.setFullYear(today.getFullYear() + 1); // Доступность на год вперёд
 
-    // Получение всех записей доступности в сезоне
-    const availabilities = await Availability.find({
-      tourId,
-      date: { $gte: seasonStart, $lte: seasonEnd },
+    const availabilities = await HotelAvailability.find({
+      hotelId,
+      date: { $gte: today, $lte: endDate },
     });
 
-    // Генерация событий для календаря
     const events = [];
-    const currentDate = new Date(seasonStart);
-    while (currentDate <= seasonEnd) {
-      const date = new Date(currentDate.setHours(0, 0, 0, 0));
-      let availableSlots = maxCapacity;
+    for (let d = new Date(today); d <= endDate; d.setDate(d.getDate() + 1)) {
+      const date = new Date(d.setHours(0, 0, 0, 0));
+      let availableSlots = hotel.capacity;
 
       const availability = availabilities.find(a => a.date.getTime() === date.getTime());
       if (availability) {
         availableSlots = availability.availableSlots;
       } else {
-        // Если запись отсутствует, создаём её
-        const newAvailability = new Availability({
-          tourId,
+        const newAvailability = new HotelAvailability({
+          hotelId,
           date,
-          availableSlots: maxCapacity,
+          availableSlots: hotel.capacity,
         });
         await newAvailability.save();
+        availableSlots = hotel.capacity;
       }
 
       events.push({
         start: date.toISOString().split('T')[0],
         availableSlots,
+        title: availableSlots >= 1 ? `Доступно: ${availableSlots}` : 'Недоступно',
+        color: availableSlots >= 1 ? '#28a745' : '#dc3545',
       });
-
-      currentDate.setDate(currentDate.getDate() + 1);
     }
 
     return res.status(200).json(events);
   } catch (error) {
-    console.error('Error in getTourAvailability:', error.message, error.stack);
+    console.error('Error in getHotelAvailability:', error.message, error.stack);
     return res.status(500).json({ error: `Ошибка получения доступности: ${error.message}` });
-  }
-};
-
-exports.getUserBookings = async (req, res) => {
-  try {
-    if (!req.user) {
-      return res.status(401).json({ error: 'Требуется авторизация' });
-    }
-
-    const bookings = await Booking.find({ userId: req.user._id })
-      .populate('tourId', 'title')
-      .lean();
-
-    console.log('Fetched bookings:', bookings.map(b => ({ _id: b._id, tourId: b.tourId, status: b.status, paymentStatus: b.paymentStatus })));
-
-    const invalidBookings = bookings.filter(b => !mongoose.Types.ObjectId.isValid(b._id));
-    if (invalidBookings.length > 0) {
-      console.warn('Invalid booking IDs found:', invalidBookings);
-    }
-
-    res.render('booking/list', {
-      bookings,
-      user: req.user,
-      message: req.flash('success') || req.flash('error'),
-    });
-  } catch (error) {
-    console.error('Error in getUserBookings:', error.message, error.stack);
-    return res.status(500).json({ error: `Ошибка загрузки бронирований: ${error.message}` });
   }
 };
 
@@ -378,7 +479,14 @@ exports.cleanExpiredBookings = async (req, res) => {
           as: 'tour',
         },
       },
-      { $unwind: '$tour' },
+      {
+        $lookup: {
+          from: 'hotels',
+          localField: 'hotelId',
+          foreignField: '_id',
+          as: 'hotel',
+        },
+      },
       {
         $match: {
           status: { $in: ['pending', 'confirmed'] },
@@ -387,20 +495,28 @@ exports.cleanExpiredBookings = async (req, res) => {
       {
         $project: {
           tourId: 1,
-          tourDate: 1,
-          durationDays: '$tour.durationDays',
-          endDate: {
-            $dateAdd: {
-              startDate: '$tourDate',
-              unit: 'day',
-              amount: '$tour.durationDays',
+          hotelId: 1,
+          startDate: 1,
+          endDate: 1,
+          durationDays: { $arrayElemAt: ['$tour.durationDays', 0] },
+          effectiveEndDate: {
+            $cond: {
+              if: { $eq: ['$hotelId', null] },
+              then: {
+                $dateAdd: {
+                  startDate: '$startDate',
+                  unit: 'day',
+                  amount: '$durationDays',
+                },
+              },
+              else: '$endDate',
             },
           },
         },
       },
       {
         $match: {
-          endDate: { $lte: currentDate },
+          effectiveEndDate: { $lte: currentDate },
         },
       },
     ]);
@@ -409,22 +525,35 @@ exports.cleanExpiredBookings = async (req, res) => {
     console.log('Expired bookings to delete:', bookingIds);
 
     if (bookingIds.length > 0) {
-      // Восстановление доступных мест для подтверждённых бронирований
       for (const booking of expiredBookings) {
-        const bookingRecord = await Booking.findById(booking._id);
+        const bookingRecord = await Booking.findById(booking._id)
+          .populate('tourId')
+          .populate('hotelId');
         if (bookingRecord.paymentStatus === 'completed') {
-          const tour = await Tour.findById(booking.tourId);
-          const tourDates = [];
-          for (let i = 0; i < tour.durationDays; i++) {
-            const date = new Date(booking.tourDate);
-            date.setDate(booking.tourDate.getDate() + i);
-            tourDates.push(new Date(date.setHours(0, 0, 0, 0)));
-          }
+          if (bookingRecord.tourId) {
+            const tour = await Tour.findById(booking.tourId);
+            const tourDates = [];
+            for (let i = 0; i < tour.durationDays; i++) {
+              const date = new Date(booking.startDate);
+              date.setDate(booking.startDate.getDate() + i);
+              tourDates.push(new Date(date.setHours(0, 0, 0, 0)));
+            }
 
-          await Availability.updateMany(
-            { tourId: tour._id, date: { $in: tourDates } },
-            { $inc: { availableSlots: bookingRecord.participants } }
-          );
+            await HotelAvailability.updateMany(
+              { hotelId: tour.accommodation.hotel?._id, date: { $in: tourDates } },
+              { $inc: { availableSlots: bookingRecord.participants } }
+            );
+          } else if (bookingRecord.hotelId) {
+            const hotelDates = [];
+            for (let d = new Date(booking.startDate); d <= new Date(booking.endDate); d.setDate(d.getDate() + 1)) {
+              hotelDates.push(new Date(d.setHours(0, 0, 0, 0)));
+            }
+
+            await HotelAvailability.updateMany(
+              { hotelId: bookingRecord.hotelId, date: { $in: hotelDates } },
+              { $inc: { availableSlots: bookingRecord.participants } }
+            );
+          }
         }
       }
 

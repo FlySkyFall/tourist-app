@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const Achievement = require('./models/Achievement');
 const Attraction = require('./models/Attraction');
-const Availability = require('./models/Availability');
+const HotelAvailability = require('./models/HotelAvailability');
 const Booking = require('./models/Booking');
 const Category = require('./models/Category');
 const Hotel = require('./models/Hotel');
@@ -208,7 +208,15 @@ const hotelsData = [
     images: ['https://commons.wikimedia.org/wiki/File:Yalta_Embankment.jpg'],
     website: 'https://www.villaelena.ru',
     capacity: 100,
-    reviews: [{ userId: null, rating: 5, comment: 'Великолепный отель!', createdAt: new Date('2025-04-01') }],
+    roomTypes: ['standard', 'standardWithAC', 'luxury'],
+    reviews: [
+      {
+        userId: new mongoose.Types.ObjectId(),
+        rating: 5,
+        comment: 'Великолепный отель!',
+        createdAt: new Date('2025-04-01'),
+      },
+    ],
   },
   {
     name: 'Mriya Resort & Spa',
@@ -219,7 +227,15 @@ const hotelsData = [
     images: ['https://commons.wikimedia.org/wiki/File:Yalta_Embankment.jpg'],
     website: 'https://mriyaresort.com',
     capacity: 400,
-    reviews: [{ userId: null, rating: 5, comment: 'Идеально для семей!', createdAt: new Date('2025-03-15') }],
+    roomTypes: ['standard', 'standardWithAC', 'luxury'],
+    reviews: [
+      {
+        userId: new mongoose.Types.ObjectId(),
+        rating: 5,
+        comment: 'Идеально для семей!',
+        createdAt: new Date('2025-03-15'),
+      },
+    ],
   },
   {
     name: 'Bristol Hotel',
@@ -230,7 +246,15 @@ const hotelsData = [
     images: ['https://commons.wikimedia.org/wiki/File:Yalta_Embankment.jpg'],
     website: 'https://bristol-yalta.ru',
     capacity: 150,
-    reviews: [{ userId: null, rating: 4, comment: 'Хороший отель, но шумно.', createdAt: new Date('2025-02-20') }],
+    roomTypes: ['standard', 'standardWithAC', 'luxury'],
+    reviews: [
+      {
+        userId: new mongoose.Types.ObjectId(),
+        rating: 4,
+        comment: 'Хороший отель, но шумно.',
+        createdAt: new Date('2025-02-20'),
+      },
+    ],
   },
   {
     name: 'Riviera Sunrise Resort & Spa',
@@ -241,7 +265,15 @@ const hotelsData = [
     images: ['https://commons.wikimedia.org/wiki/File:Alushta_Beach.jpg'],
     website: 'https://rivierasunrise.ru',
     capacity: 200,
-    reviews: [{ userId: null, rating: 5, comment: 'Отличный пляж!', createdAt: new Date('2025-04-10') }],
+    roomTypes: ['standard', 'standardWithAC', 'luxury'],
+    reviews: [
+      {
+        userId: new mongoose.Types.ObjectId(),
+        rating: 5,
+        comment: 'Отличный пляж!',
+        createdAt: new Date('2025-04-10'),
+      },
+    ],
   },
   {
     name: 'Palmira Palace',
@@ -252,7 +284,15 @@ const hotelsData = [
     images: ['https://commons.wikimedia.org/wiki/File:Yalta_Embankment.jpg'],
     website: 'https://palmira-palace.ru',
     capacity: 250,
-    reviews: [{ userId: null, rating: 5, comment: 'Спа на высоте!', createdAt: new Date('2025-03-20') }],
+    roomTypes: ['standard', 'standardWithAC', 'luxury'],
+    reviews: [
+      {
+        userId: new mongoose.Types.ObjectId(),
+        rating: 5,
+        comment: 'Спа на высоте!',
+        createdAt: new Date('2025-03-20'),
+      },
+    ],
   },
   {
     name: 'Aquamarine Resort & Spa',
@@ -263,7 +303,15 @@ const hotelsData = [
     images: ['https://commons.wikimedia.org/wiki/File:Chersonesos_Sevastopol.jpg'],
     website: 'https://aquamarine-resort.ru',
     capacity: 300,
-    reviews: [{ userId: null, rating: 4, comment: 'Хороший сервис.', createdAt: new Date('2025-03-05') }],
+    roomTypes: ['standard', 'standardWithAC', 'luxury'],
+    reviews: [
+      {
+        userId: new mongoose.Types.ObjectId(),
+        rating: 4,
+        comment: 'Хороший сервис.',
+        createdAt: new Date('2025-03-05'),
+      },
+    ],
   },
   {
     name: 'Oreanda Premier Hotel',
@@ -274,7 +322,15 @@ const hotelsData = [
     images: ['https://commons.wikimedia.org/wiki/File:Yalta_Embankment.jpg'],
     website: 'https://oreanda-hotel.ru',
     capacity: 120,
-    reviews: [{ userId: null, rating: 5, comment: 'Классика и комфорт.', createdAt: new Date('2025-04-15') }],
+    roomTypes: ['standard', 'standardWithAC', 'luxury'],
+    reviews: [
+      {
+        userId: new mongoose.Types.ObjectId(),
+        rating: 5,
+        comment: 'Классика и комфорт.',
+        createdAt: new Date('2025-04-15'),
+      },
+    ],
   },
   {
     name: 'Fiolent Hotel',
@@ -285,7 +341,15 @@ const hotelsData = [
     images: ['https://commons.wikimedia.org/wiki/File:Fiolent_Sevastopol.jpg'],
     website: 'https://fiolent-hotel.ru',
     capacity: 80,
-    reviews: [{ userId: null, rating: 4, comment: 'Тихое место.', createdAt: new Date('2025-02-25') }],
+    roomTypes: ['standard', 'standardWithAC', 'luxury'],
+    reviews: [
+      {
+        userId: new mongoose.Types.ObjectId(),
+        rating: 4,
+        comment: 'Тихое место.',
+        createdAt: new Date('2025-02-25'),
+      },
+    ],
   },
   {
     name: 'Krym Hotel',
@@ -296,7 +360,15 @@ const hotelsData = [
     images: ['https://commons.wikimedia.org/wiki/File:Simferopol_Center.jpg'],
     website: 'https://krym-hotel.ru',
     capacity: 100,
-    reviews: [{ userId: null, rating: 4, comment: 'Удобно для командировок.', createdAt: new Date('2025-03-10') }],
+    roomTypes: ['standard', 'standardWithAC', 'luxury'],
+    reviews: [
+      {
+        userId: new mongoose.Types.ObjectId(),
+        rating: 4,
+        comment: 'Удобно для командировок.',
+        createdAt: new Date('2025-03-10'),
+      },
+    ],
   },
   {
     name: 'Kerch Panorama',
@@ -307,7 +379,15 @@ const hotelsData = [
     images: ['https://commons.wikimedia.org/wiki/File:Kerch_Mithridates.jpg'],
     website: 'https://kerch-panorama.ru',
     capacity: 90,
-    reviews: [{ userId: null, rating: 4, comment: 'Красивый вид.', createdAt: new Date('2025-04-05') }],
+    roomTypes: ['standard', 'standardWithAC', 'luxury'],
+    reviews: [
+      {
+        userId: new mongoose.Types.ObjectId(),
+        rating: 4,
+        comment: 'Красивый вид.',
+        createdAt: new Date('2025-04-05'),
+      },
+    ],
   },
   {
     name: 'Golden Resort',
@@ -318,7 +398,15 @@ const hotelsData = [
     images: ['https://commons.wikimedia.org/wiki/File:Alushta_Beach.jpg'],
     website: 'https://golden-resort.ru',
     capacity: 150,
-    reviews: [{ userId: null, rating: 5, comment: 'Дети в восторге!', createdAt: new Date('2025-04-20') }],
+    roomTypes: ['standard', 'standardWithAC', 'luxury'],
+    reviews: [
+      {
+        userId: new mongoose.Types.ObjectId(),
+        rating: 5,
+        comment: 'Дети в восторге!',
+        createdAt: new Date('2025-04-20'),
+      },
+    ],
   },
   {
     name: 'Feodosia Grand',
@@ -329,7 +417,15 @@ const hotelsData = [
     images: ['https://commons.wikimedia.org/wiki/File:Feodosia_Aivazovsky_Gallery.jpg'],
     website: 'https://feodosia-grand.ru',
     capacity: 130,
-    reviews: [{ userId: null, rating: 4, comment: 'Удобное расположение.', createdAt: new Date('2025-03-25') }],
+    roomTypes: ['standard', 'standardWithAC', 'luxury'],
+    reviews: [
+      {
+        userId: new mongoose.Types.ObjectId(),
+        rating: 4,
+        comment: 'Удобное расположение.',
+        createdAt: new Date('2025-03-25'),
+      },
+    ],
   },
 ];
 
@@ -574,7 +670,7 @@ const toursData = [
     maxGroupSize: 20,
     images: ['https://commons.wikimedia.org/wiki/File:Livadia_Palace_Yalta.jpg'],
     isFeatured: true,
-    reviews: [{ userId: null, rating: 5, comment: 'Насыщенная экскурсия!', createdAt: new Date('2025-04-15') }],
+    reviews: [{ userId: new mongoose.Types.ObjectId(), rating: 5, comment: 'Насыщенная экскурсия!', createdAt: new Date('2025-04-15') }],
   },
   {
     title: 'Поход на Ай-Петри',
@@ -617,7 +713,7 @@ const toursData = [
     hotelCapacity: 20,
     images: ['https://commons.wikimedia.org/wiki/File:Yalta_Embankment.jpg'],
     isFeatured: true,
-    reviews: [{ userId: null, rating: 5, comment: 'Спа на высоте!', createdAt: new Date('2025-03-10') }],
+    reviews: [{ userId: new mongoose.Types.ObjectId(), rating: 5, comment: 'Спа на высоте!', createdAt: new Date('2025-03-10') }],
   },
   {
     title: 'Пляжный отдых в Феодосии',
@@ -638,7 +734,7 @@ const toursData = [
     hotelCapacity: 30,
     images: ['https://commons.wikimedia.org/wiki/File:Feodosia_Aivazovsky_Gallery.jpg'],
     isFeatured: true,
-    reviews: [{ userId: null, rating: 4, comment: 'Отличный пляж!', createdAt: new Date('2025-04-20') }],
+    reviews: [{ userId: new mongoose.Types.ObjectId(), rating: 4, comment: 'Отличный пляж!', createdAt: new Date('2025-04-20') }],
   },
   {
     title: 'Кемпинг в Кара-Даге',
@@ -660,7 +756,7 @@ const toursData = [
     hotelCapacity: 12,
     images: ['https://commons.wikimedia.org/wiki/File:Kara-Dag_Feodosia.jpg'],
     isFeatured: false,
-    reviews: [{ userId: null, rating: 5, comment: 'Природа супер!', createdAt: new Date('2025-04-10') }],
+    reviews: [{ userId: new mongoose.Types.ObjectId(), rating: 5, comment: 'Природа супер!', createdAt: new Date('2025-04-10') }],
   },
   {
     title: 'Винный тур по Массандре',
@@ -680,7 +776,7 @@ const toursData = [
     maxGroupSize: 20,
     images: ['https://commons.wikimedia.org/wiki/File:Massandra_Palace.jpg'],
     isFeatured: true,
-    reviews: [{ userId: null, rating: 5, comment: 'Вина отличные!', createdAt: new Date('2025-03-25') }],
+    reviews: [{ userId: new mongoose.Types.ObjectId(), rating: 5, comment: 'Вина отличные!', createdAt: new Date('2025-03-25') }],
   },
   {
     title: 'Исторический тур по Севастополю',
@@ -701,7 +797,7 @@ const toursData = [
     maxGroupSize: 20,
     images: ['https://commons.wikimedia.org/wiki/File:Chersonesos_Taurica.jpg'],
     isFeatured: true,
-    reviews: [{ userId: null, rating: 5, comment: 'Очень познавательно!', createdAt: new Date('2025-04-05') }],
+    reviews: [{ userId: new mongoose.Types.ObjectId(), rating: 5, comment: 'Очень познавательно!', createdAt: new Date('2025-04-05') }],
   },
   {
     title: 'Поход на Демерджи',
@@ -741,7 +837,7 @@ const toursData = [
     maxGroupSize: 10,
     images: ['https://commons.wikimedia.org/wiki/File:Yalta_Embankment.jpg'],
     isFeatured: true,
-    reviews: [{ userId: null, rating: 5, comment: 'Незабываемо!', createdAt: new Date('2025-04-15') }],
+    reviews: [{ userId: new mongoose.Types.ObjectId(), rating: 5, comment: 'Незабываемо!', createdAt: new Date('2025-04-15') }],
   },
   {
     title: 'Кемпинг на мысе Фиолент',
@@ -763,7 +859,7 @@ const toursData = [
     hotelCapacity: 12,
     images: ['https://commons.wikimedia.org/wiki/File:Fiolent_Sevastopol.jpg'],
     isFeatured: false,
-    reviews: [{ userId: null, rating: 4, comment: 'Красивый вид!', createdAt: new Date('2025-04-10') }],
+    reviews: [{ userId: new mongoose.Types.ObjectId(), rating: 4, comment: 'Красивый вид!', createdAt: new Date('2025-04-10') }],
   },
   {
     title: 'Оздоровительный тур в Palmira Palace',
@@ -785,7 +881,7 @@ const toursData = [
     hotelCapacity: 20,
     images: ['https://commons.wikimedia.org/wiki/File:Yalta_Embankment.jpg'],
     isFeatured: true,
-    reviews: [{ userId: null, rating: 5, comment: 'Полный релакс!', createdAt: new Date('2025-03-20') }],
+    reviews: [{ userId: new mongoose.Types.ObjectId(), rating: 5, comment: 'Полный релакс!', createdAt: new Date('2025-03-20') }],
   },
   {
     title: 'Экскурсия по Керчи',
@@ -806,7 +902,7 @@ const toursData = [
     maxGroupSize: 20,
     images: ['https://commons.wikimedia.org/wiki/File:Adzhimushkay_Kerch.jpg'],
     isFeatured: false,
-    reviews: [{ userId: null, rating: 5, comment: 'История живая!', createdAt: new Date('2025-04-05') }],
+    reviews: [{ userId: new mongoose.Types.ObjectId(), rating: 5, comment: 'История живая!', createdAt: new Date('2025-04-05') }],
   },
   {
     title: 'Винный тур по Феодосии',
@@ -826,7 +922,7 @@ const toursData = [
     maxGroupSize: 20,
     images: ['https://commons.wikimedia.org/wiki/File:Kara-Dag_Feodosia.jpg'],
     isFeatured: true,
-    reviews: [{ userId: null, rating: 4, comment: 'Интересно!', createdAt: new Date('2025-03-30') }],
+    reviews: [{ userId: new mongoose.Types.ObjectId(), rating: 4, comment: 'Интересно!', createdAt: new Date('2025-03-30') }],
   },
   {
     title: 'Пляжный отдых в Алуште',
@@ -847,7 +943,7 @@ const toursData = [
     hotelCapacity: 30,
     images: ['https://commons.wikimedia.org/wiki/File:Alushta_Beach.jpg'],
     isFeatured: true,
-    reviews: [{ userId: null, rating: 4, comment: 'Уютный пляж.', createdAt: new Date('2025-04-25') }],
+    reviews: [{ userId: new mongoose.Types.ObjectId(), rating: 4, comment: 'Уютный пляж.', createdAt: new Date('2025-04-25') }],
   },
   {
     title: 'Гастрономический тур в Ялте',
@@ -868,7 +964,7 @@ const toursData = [
     hotelCapacity: 12,
     images: ['https://commons.wikimedia.org/wiki/File:Yalta_Embankment.jpg'],
     isFeatured: false,
-    reviews: [{ userId: null, rating: 5, comment: 'Вкусно и весело!', createdAt: new Date('2025-04-10') }],
+    reviews: [{ userId: new mongoose.Types.ObjectId(), rating: 5, comment: 'Вкусно и весело!', createdAt: new Date('2025-04-10') }],
   },
   {
     title: 'Приключение в Керчи',
@@ -889,7 +985,7 @@ const toursData = [
     hotelCapacity: 10,
     images: ['https://commons.wikimedia.org/wiki/File:Adzhimushkay_Kerch.jpg'],
     isFeatured: false,
-    reviews: [{ userId: null, rating: 5, comment: 'Адреналин!', createdAt: new Date('2025-04-15') }],
+    reviews: [{ userId: new mongoose.Types.ObjectId(), rating: 5, comment: 'Адреналин!', createdAt: new Date('2025-04-15') }],
   },
   {
     title: 'Культурный тур по Феодосии',
@@ -910,7 +1006,7 @@ const toursData = [
     maxGroupSize: 20,
     images: ['https://commons.wikimedia.org/wiki/File:Aivazovsky_Gallery.jpg'],
     isFeatured: true,
-    reviews: [{ userId: null, rating: 4, comment: 'Культурно!', createdAt: new Date('2025-04-05') }],
+    reviews: [{ userId: new mongoose.Types.ObjectId(), rating: 4, comment: 'Культурно!', createdAt: new Date('2025-04-05') }],
   },
   {
     title: 'Морская прогулка в Севастополе',
@@ -930,7 +1026,7 @@ const toursData = [
     maxGroupSize: 10,
     images: ['https://commons.wikimedia.org/wiki/File:Chersonesos_Sevastopol.jpg'],
     isFeatured: true,
-    reviews: [{ userId: null, rating: 5, comment: 'Красиво!', createdAt: new Date('2025-04-20') }],
+    reviews: [{ userId: new mongoose.Types.ObjectId(), rating: 5, comment: 'Красиво!', createdAt: new Date('2025-04-20') }],
   },
   {
     title: 'Оздоровительный тур в Алуште',
@@ -952,7 +1048,7 @@ const toursData = [
     hotelCapacity: 20,
     images: ['https://commons.wikimedia.org/wiki/File:Alushta_Beach.jpg'],
     isFeatured: true,
-    reviews: [{ userId: null, rating: 5, comment: 'Расслабление!', createdAt: new Date('2025-03-15') }],
+    reviews: [{ userId: new mongoose.Types.ObjectId(), rating: 5, comment: 'Расслабление!', createdAt: new Date('2025-03-15') }],
   },
   {
     title: 'Исторический тур по Симферополю',
@@ -973,7 +1069,7 @@ const toursData = [
     maxGroupSize: 20,
     images: ['https://commons.wikimedia.org/wiki/File:Neapolis_Scythian.jpg'],
     isFeatured: false,
-    reviews: [{ userId: null, rating: 4, comment: 'Интересно!', createdAt: new Date('2025-04-10') }],
+    reviews: [{ userId: new mongoose.Types.ObjectId(), rating: 4, comment: 'Интересно!', createdAt: new Date('2025-04-10') }],
   },
 ];
 
@@ -1260,7 +1356,21 @@ const userAchievementsData = [
 
 // Функция для очистки базы данных и заполнения новыми данными
 async function seedDatabase() {
+  let connectionOpened = false;
+
   try {
+    // Проверяем состояние соединения
+    if (mongoose.connection.readyState === 0) {
+      await mongoose.connect('mongodb://localhost:27017/tourist_platform', {
+        useNewUrlParser: true,
+        useUnifiedTopology: true,
+      });
+      connectionOpened = true;
+      console.log('MongoDB подключён.');
+    } else {
+      console.log('Используется существующее соединение с MongoDB.');
+    }
+
     // Очистка всех коллекций
     await Promise.all([
       User.deleteMany({}),
@@ -1271,16 +1381,24 @@ async function seedDatabase() {
       Restaurant.deleteMany({}),
       Category.deleteMany({}),
       Tour.deleteMany({}),
-      Availability.deleteMany({}),
       Booking.deleteMany({}),
       Post.deleteMany({}),
       Review.deleteMany({}),
       UserAchievement.deleteMany({}),
+      HotelAvailability.deleteMany({}),
     ]);
     console.log('Все коллекции очищены.');
 
     // Вставка пользователей
-    const users = await User.insertMany(usersData);
+    const users = await User.insertMany(usersData.map(user => {
+      if (!user.passwordHash || typeof user.passwordHash !== 'string' || user.passwordHash.trim() === '') {
+        throw new Error(`Некорректный пароль для пользователя ${user.username || 'неизвестно'}`);
+      }
+      return {
+        ...user,
+        password: user.passwordHash, // Используем passwordHash как уже хешированный пароль
+      };
+    }));
     console.log('Пользователи добавлены:', users.length);
 
     // Вставка достижений
@@ -1294,9 +1412,18 @@ async function seedDatabase() {
     // Вставка отелей
     const hotels = await Hotel.insertMany(hotelsData.map(hotel => ({
       ...hotel,
-      reviews: hotel.reviews.map(review => ({ ...review, userId: users[Math.floor(Math.random() * users.length)]._id })),
+      reviews: hotel.reviews.map(review => ({
+        ...review,
+        userId: users[Math.floor(Math.random() * users.length)]._id,
+      })),
     })));
     console.log('Отели добавлены:', hotels.length);
+
+    // Маппинг отелей по имени
+    const hotelMap = hotels.reduce((map, hotel) => {
+      map[hotel.name] = hotel._id;
+      return map;
+    }, {});
 
     // Вставка достопримечательностей
     const attractions = await Attraction.insertMany(attractionsData);
@@ -1305,7 +1432,10 @@ async function seedDatabase() {
     // Вставка ресторанов
     const restaurants = await Restaurant.insertMany(restaurantsData.map(restaurant => ({
       ...restaurant,
-      reviews: restaurant.reviews.map(review => ({ ...review, userId: users[Math.floor(Math.random() * users.length)]._id })),
+      reviews: restaurant.reviews.map(review => ({
+        ...review,
+        userId: users[Math.floor(Math.random() * users.length)]._id,
+      })),
     })));
     console.log('Рестораны добавлены:', restaurants.length);
 
@@ -1313,24 +1443,53 @@ async function seedDatabase() {
     const categories = await Category.insertMany(categoriesData);
     console.log('Категории добавлены:', categories.length);
 
-    // Вставка туров
-    const tours = await Tour.insertMany(toursData.map(tour => ({
-      ...tour,
-      accommodation: {
-        ...tour.accommodation,
-        hotel: tour.accommodation.type === 'hotel' ? hotels[Math.floor(Math.random() * hotels.length)]._id : null,
-      },
-      reviews: tour.reviews.map(review => ({ ...review, userId: users[Math.floor(Math.random() * users.length)]._id })),
-      hotelCapacity: tour.accommodation.type === 'hotel' ? Math.min(tour.maxGroupSize, hotels.find(h => h._id.equals(tour.accommodation.hotel))?.capacity || tour.maxGroupSize) : tour.maxGroupSize,
-    })));
+    // Вставка туров с целенаправленным связыванием отелей
+    const tours = await Tour.insertMany(toursData.map(tour => {
+      let hotelId = null;
+      if (tour.accommodation.type === 'hotel') {
+        let hotelName;
+        if (tour.title.includes('Mriya Resort')) {
+          hotelName = 'Mriya Resort & Spa';
+        } else if (tour.title.includes('Palmira Palace')) {
+          hotelName = 'Palmira Palace';
+        } else if (tour.title.includes('Riviera Sunrise')) {
+          hotelName = 'Riviera Sunrise Resort & Spa';
+        } else if (tour.title.includes('Феодосии')) {
+          hotelName = 'Feodosia Grand';
+        } else if (tour.title.includes('Алуште')) {
+          hotelName = 'Golden Resort';
+        } else if (tour.title.includes('Гастрономический') || tour.title.includes('Керчи')) {
+          hotelName = 'Bristol Hotel';
+        } else {
+          // Резервный вариант: случайный отель в том же регионе
+          const regionHotels = hotels.filter(h => h.location.region === tour.location.region);
+          hotelName = regionHotels[Math.floor(Math.random() * regionHotels.length)]?.name;
+        }
+        hotelId = hotelMap[hotelName] || null;
+      }
+      return {
+        ...tour,
+        accommodation: {
+          ...tour.accommodation,
+          hotel: hotelId,
+        },
+        reviews: tour.reviews.map(review => ({
+          ...review,
+          userId: users[Math.floor(Math.random() * users.length)]._id,
+        })),
+        hotelCapacity: tour.accommodation.type === 'hotel' && hotelId
+          ? Math.min(tour.maxGroupSize, hotels.find(h => h._id.equals(hotelId))?.capacity || tour.maxGroupSize)
+          : tour.maxGroupSize,
+      };
+    }));
     console.log('Туры добавлены:', tours.length);
 
-    // Вставка доступности
-    const availability = await Availability.insertMany(availabilityData.map(item => ({
+    // Вставка доступности туров
+    /*const availability = await Availability.insertMany(availabilityData.map(item => ({
       ...item,
       tourId: tours[Math.floor(Math.random() * tours.length)]._id,
     })));
-    console.log('Доступность добавлена:', availability.length);
+    console.log('Доступность туров добавлена:', availability.length); */
 
     // Вставка бронирований
     const bookings = await Booking.insertMany(bookingsData.map(booking => ({
@@ -1340,6 +1499,25 @@ async function seedDatabase() {
     })));
     console.log('Бронирования добавлены:', bookings.length);
 
+    // Вставка доступности отелей
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const endDate = new Date(today);
+    endDate.setFullYear(today.getFullYear() + 1);
+
+    const hotelAvailabilities = [];
+    for (const hotel of hotels) {
+      for (let d = new Date(today); d <= endDate; d.setDate(d.getDate() + 1)) {
+        hotelAvailabilities.push({
+          hotelId: hotel._id,
+          date: new Date(d),
+          availableSlots: hotel.capacity,
+        });
+      }
+    }
+    await HotelAvailability.insertMany(hotelAvailabilities);
+    console.log('Доступность отелей добавлена:', hotelAvailabilities.length);
+
     // Вставка постов
     const posts = await Post.insertMany(postsData.map(post => ({
       ...post,
@@ -1348,7 +1526,7 @@ async function seedDatabase() {
       likes: Array.from({ length: Math.floor(Math.random() * 5) }, () => users[Math.floor(Math.random() * users.length)]._id),
       comments: post.comments.map(comment => ({
         ...comment,
-        user: users[Math.floor(Math.random() * users.length)]._id, // Заменяем user: null на случайный _id пользователя
+        user: users[Math.floor(Math.random() * users.length)]._id,
       })),
     })));
     console.log('Посты добавлены:', posts.length);
@@ -1359,7 +1537,6 @@ async function seedDatabase() {
       userId: users[Math.floor(Math.random() * users.length)]._id,
       tourId: tours[Math.floor(Math.random() * tours.length)]._id,
     })));
-    console.log('Отзывы добавлены:', reviews.length);
     console.log('Отзывы добавлены:', reviews.length);
 
     // Вставка достижений пользователей
@@ -1372,10 +1549,15 @@ async function seedDatabase() {
 
     console.log('База данных успешно заполнена!');
   } catch (error) {
-    console.error('Ошибка при заполнении базы данных:', error);
+    console.error('Ошибка при заполнении базы данных:', error.message, error.stack);
   } finally {
-    await mongoose.connection.close();
-    console.log('Подключение к MongoDB закрыто.');
+    // Закрываем соединение только если мы его открыли
+    if (connectionOpened && mongoose.connection.readyState !== 0) {
+      await mongoose.connection.close();
+      console.log('Подключение к MongoDB закрыто.');
+    } else {
+      console.log('Соединение не закрывалось, так как использовалось существующее или уже закрыто.');
+    }
   }
 }
 

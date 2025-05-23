@@ -1,4 +1,5 @@
 const Hotel = require('../models/Hotel');
+const Booking = require('../models/Booking');
 
 exports.getHotels = async (req, res) => {
   try {
@@ -8,7 +9,7 @@ exports.getHotels = async (req, res) => {
     const search = req.query.search ? req.query.search.trim() : '';
     const region = req.query.region ? req.query.region.trim() : '';
 
-    console.log('Hotel filter params:', { page, search, region }); // Логирование параметров
+    console.log('Hotel filter params:', { page, search, region });
 
     const query = {};
     if (search) {
@@ -29,7 +30,7 @@ exports.getHotels = async (req, res) => {
     const totalHotels = await Hotel.countDocuments(query);
     const totalPages = Math.ceil(totalHotels / limit);
 
-    console.log('Hotels found:', hotels.length, 'Total:', totalHotels); // Логирование результатов
+    console.log('Hotels found:', hotels.length, 'Total:', totalHotels);
 
     res.render('hotels/index', {
       hotels,
@@ -54,6 +55,7 @@ exports.getHotels = async (req, res) => {
     });
   }
 };
+
 exports.getHotelById = async (req, res) => {
   try {
     const hotel = await Hotel.findById(req.params.id).populate('reviews.userId', 'username').lean();
@@ -61,10 +63,23 @@ exports.getHotelById = async (req, res) => {
       return res.status(404).render('error', { message: 'Отель не найден' });
     }
     const hasReviewed = req.user ? hotel.reviews.some(review => review.userId._id.toString() === req.user._id.toString()) : false;
+    const hasActiveBooking = req.user
+      ? await Booking.exists({
+          userId: req.user._id,
+          status: { $in: ['pending', 'confirmed'] }
+        })
+      : false;
+    const roomTypeLabels = {
+      standard: 'Обычный',
+      standardWithAC: 'Обычный с кондиционером',
+      luxury: 'Люкс',
+    };
     res.render('hotels/hotel', {
       hotel,
       user: req.user || null,
       hasReviewed,
+      hasActiveBooking,
+      roomTypeLabels,
       error: null,
       csrfToken: req.csrfToken ? req.csrfToken() : '',
     });

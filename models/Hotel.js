@@ -15,6 +15,11 @@ const hotelSchema = new mongoose.Schema({
   images: [String],
   website: { type: String },
   capacity: { type: Number, min: 1 },
+  roomTypes: [{
+    type: String,
+    enum: ['standard', 'standardWithAC', 'luxury'],
+    required: true
+  }],
   reviews: [
     {
       userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },

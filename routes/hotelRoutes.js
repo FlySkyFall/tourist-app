@@ -1,18 +1,16 @@
 const express = require('express');
 const router = express.Router();
 const hotelController = require('../controllers/hotelController');
+const bookingsController = require('../controllers/bookingsController');
 const authMiddleware = require('../middleware/authMiddleware');
 const { body, validationResult } = require('express-validator');
 const { checkAchievements } = require('../services/achievementService');
-const Hotel = require('../models/Hotel'); // Импортируем модель Hotel для обработки ошибок валидации
+const Hotel = require('../models/Hotel');
 
-// Маршрут для списка отелей
 router.get('/', hotelController.getHotels);
-
-// Маршрут для страницы конкретного отеля
 router.get('/:id', hotelController.getHotelById);
+router.get('/:id/availability', bookingsController.getHotelAvailability);
 
-// Маршрут для добавления отзыва
 router.post(
   '/:id/reviews',
   authMiddleware,

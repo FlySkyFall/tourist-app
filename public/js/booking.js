@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const bookingForm = document.querySelector('#booking-form');
   const tourDateInput = document.querySelector('#tourDate');
   const participantsInput = document.querySelector('#participants');
+  const roomTypeInput = document.querySelector('#roomType'); // Поле для типа номера
   const bookTourBtn = document.querySelector('#book-tour-btn');
   const bookingError = document.querySelector('#booking-error');
   const bookingSuccess = document.querySelector('#booking-success');
@@ -18,6 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
       bookTourBtn: !!bookTourBtn,
       bookingError: !!bookingError,
       bookingSuccess: !!bookingSuccess,
+      roomTypeInput: !!roomTypeInput,
     });
     return;
   }
@@ -45,8 +47,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const maxGroupSize = window.tourData.maxGroupSize;
   const minGroupSize = window.tourData.minGroupSize || 1;
   const durationDays = window.tourData.durationDays;
+  const accommodationType = window.tourData.accommodation?.type;
 
-  console.log('Tour data:', { tourId, tourType, seasonStart, seasonEnd, maxGroupSize, minGroupSize, durationDays });
+  console.log('Tour data:', { tourId, tourType, seasonStart, seasonEnd, maxGroupSize, minGroupSize, durationDays, accommodationType });
 
   if (isNaN(seasonStart.getTime()) || isNaN(seasonEnd.getTime())) {
     console.error('Invalid season dates:', window.tourData.season);
@@ -253,6 +256,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const tourDate = tourDateInput.value;
     const participants = parseInt(participantsInput.value);
+    const roomType = roomTypeInput ? roomTypeInput.value : undefined;
 
     if (!tourDate) {
       bookingError.textContent = 'Пожалуйста, выберите дату тура';
@@ -283,6 +287,14 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
+    // Проверка roomType для туров с отелем
+    if (['hotel', 'sanatorium'].includes(accommodationType) && !roomType) {
+      bookingError.textContent = 'Пожалуйста, выберите тип номера';
+      bookingError.classList.remove('hidden');
+      bookingSuccess.classList.add('hidden');
+      return;
+    }
+
     try {
       bookTourBtn.disabled = true;
       bookTourBtn.textContent = 'Бронирование...';
@@ -297,6 +309,7 @@ document.addEventListener('DOMContentLoaded', () => {
           tourId,
           tourDate,
           participants,
+          roomType,
         }),
       });
 

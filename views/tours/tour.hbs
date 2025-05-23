@@ -46,7 +46,6 @@
         </div>
       </div>
 
-      <!-- Карта -->
       <div class="mt-8">
         <h2 class="text-2xl font-bold mb-4">Местоположение</h2>
         <div id="tourMap" class="rounded-lg"></div>
@@ -80,6 +79,24 @@
                 <label for="participants" class="block text-gray-700 mb-2">Количество участников:</label>
                 <input type="number" id="participants" name="participants" min="1" max="{{tour.maxGroupSize}}" class="w-full border rounded-lg px-4 py-2" required>
               </div>
+              {{#if (or (eq tour.accommodation.type 'hotel') (eq tour.accommodation.type 'sanatorium'))}}
+                <div class="mb-4">
+                  <label for="roomType" class="block text-gray-700 mb-2">Тип номера:</label>
+                  {{#if (or (eq tour.accommodation.type 'hotel') (eq tour.accommodation.type 'sanatorium'))}}
+                    <div class="mb-4">
+                      <label for="roomType" class="block text-gray-700 mb-2">Тип номера:</label>
+                      <select id="roomType" name="roomType" class="w-full border rounded-lg px-4 py-2" required>
+                        <option value="">Выберите тип номера</option>
+                        {{#each tour.accommodation.hotel.roomTypes}}
+                          <option value="{{this}}">
+                            {{lookup ../roomTypeLabels this}}
+                          </option>
+                        {{/each}}
+                      </select>
+                    </div>
+                  {{/if}}
+                </div>
+              {{/if}}
               <p id="booking-error" class="text-red-600 mb-4 hidden"></p>
               <p id="booking-success" class="text-green-600 mb-4 hidden"></p>
               <button type="submit" id="book-tour-btn" class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded">Забронировать</button>
@@ -157,6 +174,15 @@
                   {{this}}{{#unless @last}}, {{/unless}}
                 {{else}}
                   Нет удобств
+                {{/each}}
+              </p>
+              <p><strong>Типы номеров:</strong> 
+                {{#each tour.accommodation.hotel.roomTypes}}
+                  {{#if (eq this 'standard')}}Обычный
+                  {{else if (eq this 'standardWithAC')}}Обычный с кондиционером
+                  {{else}}Люкс{{/if}}{{#unless @last}}, {{/unless}}
+                {{else}}
+                  Нет информации
                 {{/each}}
               </p>
             {{else}}

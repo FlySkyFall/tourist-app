@@ -46,7 +46,14 @@
                 {{else if (eq this.paymentStatus 'completed')}}Оплачено
                 {{else}}Ошибка оплаты{{/if}}
               </p>
-              <p class="text-gray-600 mb-4">Участников: {{this.participants}}</p>
+              <p class="text-gray-600 mb-2">Участников: {{this.participants}}</p>
+              {{#if (and this.roomType (or (eq this.tourId.accommodation.type 'hotel') (eq this.tourId.accommodation.type 'sanatorium')))}}
+                <p class="text-gray-600 mb-4">Тип номера: 
+                  {{#if (eq this.roomType 'standard')}}Обычный
+                  {{else if (eq this.roomType 'standardWithAC')}}Обычный с кондиционером
+                  {{else}}Люкс{{/if}}
+                </p>
+              {{/if}}
               {{#if (or (eq this.paymentStatus 'pending') (eq this.paymentStatus 'failed'))}}
                 <button 
                   onclick="openPaymentModal('{{this._id}}')"
@@ -64,7 +71,6 @@
           {{/each}}
         </div>
 
-        <!-- Модальное окно оплаты -->
         <div id="paymentModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
           <div class="bg-white p-6 rounded-lg w-full max-w-md">
             <h2 class="text-xl font-semibold mb-4">Оплата брони</h2>
