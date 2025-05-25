@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const hotelController = require('../controllers/hotelController');
-const bookingsController = require('../controllers/bookingsController');
+const bookingsController = require('../controllers/bookingController');
 const authMiddleware = require('../middleware/authMiddleware');
 const { body, validationResult } = require('express-validator');
 const { checkAchievements } = require('../services/achievementService');
