@@ -11,7 +11,7 @@ exports.getHomePage = async (req, res) => {
     const totalTours = await Tour.countDocuments(tourQuery);
     const totalPages = Math.ceil(totalTours / limit);
     const featuredTours = await Tour.find(tourQuery).skip(skip).limit(limit).lean();
-    const regions = await Region.find().limit(6).lean();
+    const regions = await Region.find().lean();
 
     // Редирект на последнюю страницу, если page > totalPages
     if (page > totalPages && totalPages > 0) {
